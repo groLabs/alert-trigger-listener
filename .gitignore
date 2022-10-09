@@ -1,0 +1,7 @@
+.env
+.vscode/
+dist/
+test/
+logs/
+node_modules/
+*-audit.json
