@@ -1,23 +1,21 @@
 export const EndPoints = {
+  //   ethereum: {
+  //     fullRPCEndPoint: `https://eth-mainnet.alchemyapi.io/v2/${process.env.alchemy_key}`,
+  //     fullWSEndPoint: `wss://eth-mainnet.alchemyapi.io/v2/${process.env.alchemy_key}`,
+  //   },
   ethereum: {
-    fullRPCEndPoint: `https://eth-mainnet.alchemyapi.io/v2/${process.env.alchemy_key}`,
-    fullWSEndPoint: `wss://eth-mainnet.alchemyapi.io/v2/${process.env.alchemy_key}`,
+    fullRPCEndPoint: "http://127.0.0.1:8545/",
+    fullWSEndPoint: "http://127.0.0.1:8545/",
   },
 };
 
 export const EthereumSubscribeConfig = {
   GVault: {
-    handler: "handleDepositHandlerEvent",
-    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    address: "0x06b3244b086cecC40F1e5A826f736Ded68068a0F",
     events: {
-      Transfer: {
-        topic:
-          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-        alertFunction: "checkSystemAssets",
-      },
-      Approval: {
-        topic:
-          "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
+      Deposit: {
+        signature:
+          "event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares)",
         alertFunction: "checkSystemAssets",
       },
     },

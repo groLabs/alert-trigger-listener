@@ -1,5 +1,6 @@
 import config from "config";
-const logger = require("../logger");
+const BN = require("bignumber.js");
+const logger = require("./logger");
 
 export function getConfig(key: string, existCheck: boolean = true): any {
   if (config.has(key)) return config.get(key);
@@ -11,4 +12,45 @@ export function getConfig(key: string, existCheck: boolean = true): any {
   }
 
   return undefined;
+}
+
+export function plus(items: any[]) {
+  let result = BN(0);
+  for (let i = 0; i < items.length; i += 1) {
+    result = result.plus(BN(items[i].toString()));
+  }
+  return result.toFixed();
+}
+
+export function sub(subtraction: any, minuends: any[]) {
+  let result = BN(subtraction.toString());
+  for (let i = 0; i < minuends.length; i += 1) {
+    result = result.minus(BN(minuends[i].toString()));
+  }
+  return result.toFixed();
+}
+
+export function divide(divisor: any, dividend: any) {
+  const result = BN(divisor.toString())
+    .dividedBy(BN(dividend.toString()))
+    .abs();
+  return result.toFixed();
+}
+
+export function percentToBPS(percent: any) {
+  return parseInt(BN(percent.toString()).multipliedBy(10000).toFixed(0));
+}
+
+export function isEqual(item1: any, item2: any) {
+  return BN(item1.toString()).isEqualTo(item2.toString());
+}
+
+export function removeDecimals(
+  data: string,
+  decimals: number,
+  precision: number = 2
+) {
+  const tempNum = BN(data).div(BN(10).pow(decimals));
+  const result = tempNum.toFixed(precision);
+  return result;
 }

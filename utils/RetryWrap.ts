@@ -1,12 +1,6 @@
 import { getConfig } from "./tools";
-const logger = require("../logger");
-
-interface retryOptions {
-  fn: any;
-  thisObj: object;
-  currentRetry?: number;
-  params: any[];
-}
+import { retryOptions } from "./interface";
+const logger = require("./logger");
 
 export class RetryWrap {
   private static readonly _retryAttempts: number =

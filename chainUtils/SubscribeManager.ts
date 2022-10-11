@@ -1,7 +1,9 @@
 const Web3 = require("web3");
+
+import { ethers } from "ethers";
 import { ChainHelper } from "./ChainHelper";
 import { AlertCheckService } from "./AlertCheckService";
-const logger = require("../logger");
+const logger = require("../utils/logger");
 
 export class SubscribeManager {
   private readonly _chainName: string;
@@ -10,6 +12,7 @@ export class SubscribeManager {
   private readonly _wsProvider: any;
   private readonly _web3Instance: any;
   private readonly _functions: any;
+  private _interface: any;
 
   constructor(chainName: string, contractName: string, eventConfig: any) {
     this._chainName = chainName.toLowerCase();
@@ -18,20 +21,35 @@ export class SubscribeManager {
     this._wsProvider = this._getWSProvider();
     this._web3Instance = new Web3(this._wsProvider);
     this._functions = {};
+    this._initInterface();
     this._initFunctions();
   }
 
   public startSubscribe() {
     const options = this._getSubscribeOptions();
+    console.log(`options: ${JSON.stringify(options)}`);
     const contractName = this._contractName;
     const checkService: any = AlertCheckService.getAlertCheckServiceInstance();
 
     const callback = function (data: any) {
-      const topic = data.topics[0];
+      logger.info(`data: ${JSON.stringify(data)}`);
+      const { address, topics, blockNumber, transactionHash } = data;
+      const topic = topics[0];
       //@ts-ignore
       const functionName = this._functions[topic];
-      logger.info(`topic: ${JSON.stringify(topic)}`);
-      checkService[functionName].call(checkService, {}, {});
+      //@ts-ignore
+      const decodeData = this._interface.parseLog(data);
+      checkService[functionName].call(
+        checkService,
+        {
+          blockNumber,
+          transactionHash,
+          contractAddress: address,
+          args: decodeData.args,
+        },
+        //@ts-ignore
+        { contractName: this._contractName, eventName: decodeData.name }
+      );
     }.bind(this);
 
     this._web3Instance.eth
@@ -66,7 +84,7 @@ export class SubscribeManager {
     const events = Object.keys(this._eventConfig.events);
     const topics: any = [];
     events.forEach((key) => {
-      topics.push(this._eventConfig.events[key].topic);
+      topics.push(this._interface.getEventTopic(key));
     });
     options.topics.push(topics);
     return options;
@@ -76,7 +94,18 @@ export class SubscribeManager {
     const events = Object.keys(this._eventConfig.events);
     events.forEach((key) => {
       const eventItem = this._eventConfig.events[key];
-      this._functions[eventItem.topic] = eventItem.alertFunction;
+      this._functions[this._interface.getEventTopic(key)] =
+        eventItem.alertFunction;
     });
+  }
+
+  private _initInterface() {
+    const eventsName = Object.keys(this._eventConfig.events);
+    const events: any = [];
+    eventsName.forEach((key) => {
+      const eventItem = this._eventConfig.events[key];
+      events.push(eventItem.signature);
+    });
+    this._interface = new ethers.utils.Interface(events);
   }
 }

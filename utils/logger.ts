@@ -3,7 +3,7 @@ const { createLogger, format, transports } = require("winston");
 const { combine, timestamp, printf, errors } = format;
 require("winston-daily-rotate-file");
 
-const logFolder = "./logs";
+const logFolder = ".";
 const isConsoleOpen = true;
 
 const projectName = process.env.NODE_ENV ? process.env.NODE_ENV : "";
