@@ -2,7 +2,7 @@ const Web3 = require("web3");
 
 import { ethers } from "ethers";
 import { ChainHelper } from "./ChainHelper";
-import { AlertCheckService } from "./AlertCheckService";
+import { AlertCheckService } from "../checkService/AlertCheckService";
 const logger = require("../utils/logger");
 
 export class SubscribeManager {
@@ -32,7 +32,6 @@ export class SubscribeManager {
     const checkService: any = AlertCheckService.getAlertCheckServiceInstance();
 
     const callback = function (data: any) {
-      logger.info(`data: ${JSON.stringify(data)}`);
       const { address, topics, blockNumber, transactionHash } = data;
       const topic = topics[0];
       //@ts-ignore

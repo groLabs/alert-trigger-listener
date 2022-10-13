@@ -12,4 +12,6 @@ export interface MessageObj {
   changeTotal?: number;
   changeBPS?: number;
   baseBPS?: number;
+  gain?: number;
+  loss?: number;
 }
