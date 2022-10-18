@@ -19,6 +19,17 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
         return this._getPricePerShare(contractAddress, blockNumber);
       case "lockedProfit":
         return this._getLockedProfit(contractAddress, blockNumber);
+      case "strategyTotalDebt":
+        return this._getStrategyTotalDebt(
+          contractAddress,
+          options.strategy,
+          blockNumber
+        );
+      case "strategyEstimatedTotalAssets":
+        return this._getStrategyEstimatedTotalAssets(
+          contractAddress,
+          blockNumber
+        );
       default:
         logger.error(
           `Not fund chain data function by function: ${functionName}`
@@ -45,7 +56,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     ];
 
     const gtoken = new this._web3.eth.Contract(abi, contractAddress);
-    const result = gtoken.methods.factor().call({}, blockNumber);
+    const result = await gtoken.methods.factor().call({}, blockNumber);
     return result;
   }
 
@@ -70,7 +81,9 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     ];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
-    const result = contract.methods.realizedTotalAssets().call({}, blockNumber);
+    const result = await contract.methods
+      .realizedTotalAssets()
+      .call({}, blockNumber);
     return result;
   }
 
@@ -92,7 +105,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     ];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
-    const result = contract.methods.totalSupply().call({}, blockNumber);
+    const result = await contract.methods.totalSupply().call({}, blockNumber);
     return result;
   }
 
@@ -117,7 +130,9 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     ];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
-    const result = contract.methods.getPricePerShare().call({}, blockNumber);
+    const result = await contract.methods
+      .getPricePerShare()
+      .call({}, blockNumber);
     return result;
   }
 
@@ -139,7 +154,114 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     ];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
-    const result = contract.methods.lockedProfit().call({}, blockNumber);
+    const result = await contract.methods.lockedProfit().call({}, blockNumber);
     return result;
+  }
+
+  private async _getStrategyEstimatedTotalAssets(
+    contractAddress: string,
+    blockNumber: number
+  ) {
+    const abi = [
+      {
+        inputs: [],
+        name: "estimatedTotalAssets",
+        outputs: [
+          {
+            internalType: "uint256",
+            name: "",
+            type: "uint256",
+          },
+        ],
+        stateMutability: "view",
+        type: "function",
+      },
+    ];
+
+    const contract = new this._web3.eth.Contract(abi, contractAddress);
+    const result = await contract.methods
+      .estimatedTotalAssets()
+      .call({}, blockNumber);
+    return result;
+  }
+
+  private async _getStrategyTotalDebt(
+    gVaultAddress: string,
+    strategyAddress: string,
+    blockNumber: number
+  ) {
+    return this._getStrategyInfo(
+      gVaultAddress,
+      strategyAddress,
+      blockNumber,
+      "totalDebt"
+    );
+  }
+
+  private async _getStrategyInfo(
+    gVaultAddress: string,
+    strategyAddress: string,
+    blockNumber: number,
+    fieldName: string
+  ) {
+    const abi = [
+      {
+        inputs: [
+          {
+            internalType: "address",
+            name: "_address",
+            type: "address",
+          },
+        ],
+        name: "strategies",
+        outputs: [
+          {
+            components: [
+              {
+                internalType: "bool",
+                name: "active",
+                type: "bool",
+              },
+              {
+                internalType: "uint256",
+                name: "debtRatio",
+                type: "uint256",
+              },
+              {
+                internalType: "uint256",
+                name: "lastReport",
+                type: "uint256",
+              },
+              {
+                internalType: "uint256",
+                name: "totalDebt",
+                type: "uint256",
+              },
+              {
+                internalType: "uint256",
+                name: "totalGain",
+                type: "uint256",
+              },
+              {
+                internalType: "uint256",
+                name: "totalLoss",
+                type: "uint256",
+              },
+            ],
+            internalType: "struct StrategyParams",
+            name: "",
+            type: "tuple",
+          },
+        ],
+        stateMutability: "view",
+        type: "function",
+      },
+    ];
+    const contract = new this._web3.eth.Contract(abi, gVaultAddress);
+    const result = await contract.methods
+      .strategies(strategyAddress)
+      .call({}, blockNumber);
+    console.log(`result: ${JSON.stringify(result)}`);
+    return result[fieldName];
   }
 }

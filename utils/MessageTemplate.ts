@@ -1,4 +1,6 @@
 import { MessageObj } from "../utils/interface";
+import { shortTXHash, getConfig, removeDecimals } from "../utils/tools";
+const strategiesConfig = getConfig("strategies");
 
 export class MessageTemplate {
   public static getTotalAssetAlertMsg(msgObj: MessageObj) {
@@ -21,8 +23,23 @@ export class MessageTemplate {
     return `[${alertLeval}] - System asset change | Locked profit in block ${blockNumber} isn't same and changed ${changeTotal}`;
   }
 
-  //   public static getStrategyHarvestMsg(msgObj: MessageObj){
-  // 	const { transactionHash, gain, loss } = msgObj;
-  //     return `Strategy[${transactionHash}] harvest profit`;
-  //   }
+  public static getStrategyHarvestInfoMsg(msgObj: MessageObj) {
+    const {
+      strategy,
+      transactionHash,
+      profit,
+      debtPaid,
+      debtAdded,
+      lockedProfit,
+    } = msgObj;
+    const ndProfit = removeDecimals(profit);
+    const ndDebtPaid = removeDecimals(debtPaid);
+    const ndDebtAdded = removeDecimals(debtAdded);
+    const ndLockedProfit = removeDecimals(lockedProfit);
+    return `[${shortTXHash(
+      transactionHash
+    )}](https://etherscan.io/tx/${transactionHash}) ${
+      strategiesConfig[strategy || ""]?.name
+    } strategy does harvest action with profit: ${ndProfit}, debtPaid: ${ndDebtPaid}, debtAdded:${ndDebtAdded}, lockedProfit:${ndLockedProfit}.`;
+  }
 }

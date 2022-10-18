@@ -31,6 +31,7 @@ export function sub(subtraction: any, minuends: any[]) {
 }
 
 export function divide(divisor: any, dividend: any) {
+  if (dividend.toString() === "0") return "0";
   const result = BN(divisor.toString())
     .dividedBy(BN(dividend.toString()))
     .abs();
@@ -46,11 +47,19 @@ export function isEqual(item1: any, item2: any) {
 }
 
 export function removeDecimals(
-  data: string,
-  decimals: number,
+  data: string = "0",
+  decimals: number = 18,
   precision: number = 2
 ) {
-  const tempNum = BN(data).div(BN(10).pow(decimals));
+  const tempNum = BN(data.toString()).div(BN(10).pow(decimals));
   const result = tempNum.toFixed(precision);
   return result;
+}
+
+export function shortTXHash(
+  accountAddress: string | undefined,
+  fixed: number = 6
+) {
+  if (accountAddress) return accountAddress.substring(0, fixed);
+  return "";
 }

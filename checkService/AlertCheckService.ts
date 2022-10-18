@@ -1,5 +1,6 @@
 import { ChainHelper } from "../chainUtils/ChainHelper";
 import { RetryWrap } from "../utils/RetryWrap";
+import { Event } from "../utils/interface";
 import {
   plus,
   sub,
@@ -27,7 +28,7 @@ export class AlertCheckService {
     return AlertCheckService._alertCheckService;
   }
 
-  public async checkGVaultSystemAssets(eventData: any, options: any) {
+  public async checkGVaultSystemAssets(eventData: Event, options: any) {
     logger.info(`options: ${JSON.stringify(options)}`);
     const { blockNumber, transactionHash, contractAddress, args } = eventData;
     const { contractName, eventName } = options;
@@ -164,124 +165,76 @@ export class AlertCheckService {
     }
   }
 
-  public async checkGVaultHarvestEvent(eventData: any, options: any) {
+  public async checkGVaultHarvestEvent(eventData: Event, options: any) {
     logger.info(`options: ${JSON.stringify(options)}`);
     const { blockNumber, transactionHash, contractAddress, args } = eventData;
     const { contractName, eventName } = options;
-    const { strategy, gain, loss, lockedProfit } = args;
+    const { strategy, gain, loss, debtPaid, debtAdded, lockedProfit } = args;
     logger.info(
-      `strategy: ${strategy}\ngain: ${gain}\nloss: ${loss}\nlockedProfit: ${lockedProfit}`
+      `strategy: ${strategy}\ngain: ${gain}\nloss: ${loss}\ndebtPaid:${debtPaid}\ndebtAdded:${debtAdded}\nlockedProfit: ${lockedProfit}`
     );
-    const currentTotalAssets = await this._getChainData(
-      "realizedTotalAssets",
-      contractAddress,
-      {
-        blockNumber,
-      }
-    );
-    const currentTotalSupply = await this._getChainData(
-      "totalSupply",
-      contractAddress,
-      {
-        blockNumber,
-      }
-    );
-    const currentPricePerShare = await this._getChainData(
-      "pricePerShare",
-      contractAddress,
-      {
-        blockNumber,
-      }
-    );
-    const currentLockedProfit = await this._getChainData(
-      "lockedProfit",
-      contractAddress,
-      {
-        blockNumber,
-      }
-    );
-    logger.info(`currentTotalAssets: ${currentTotalAssets}`);
-    logger.info(`currentTotalSupply: ${currentTotalSupply}`);
-    logger.info(`currentPricePerShare: ${currentPricePerShare}`);
-    logger.info(`currentLockedProfit: ${currentLockedProfit}`);
-    const previousBlockNumber = blockNumber - 1;
-    const previousTotalAssets = await this._getChainData(
-      "realizedTotalAssets",
-      contractAddress,
-      {
-        blockNumber: previousBlockNumber,
-      }
-    );
-    const previousTotalSupploy = await this._getChainData(
-      "totalSupply",
-      contractAddress,
-      {
-        blockNumber: previousBlockNumber,
-      }
-    );
-    const previousPricePerShare = await this._getChainData(
-      "pricePerShare",
-      contractAddress,
-      {
-        blockNumber: previousBlockNumber,
-      }
-    );
-    const previousLockedProfit = await this._getChainData(
-      "lockedProfit",
-      contractAddress,
-      {
-        blockNumber: previousBlockNumber,
-      }
-    );
-    logger.info(`previousTotalAssets: ${previousTotalAssets}`);
-    logger.info(`previousTotalSupploy: ${previousTotalSupploy}`);
-    logger.info(`previousPricePerShare: ${previousPricePerShare}`);
-    logger.info(`previousLockedProfit: ${previousLockedProfit}`);
 
     const profit =
       loss.toString() === "0" ? BN(gain.toString()) : BN(`-${loss}`);
     logger.info(`profit: ${profit}`);
 
-    const expectedTotalAssets = plus([previousTotalAssets, profit]);
-    logger.info(`expectedTotalAssets: ${expectedTotalAssets}`);
+    // send harvest message
+    const harvestInfo = MessageTemplate.getStrategyHarvestInfoMsg({
+      strategy,
+      transactionHash,
+      profit: profit.toFixed(),
+      debtPaid,
+      debtAdded,
+      lockedProfit,
+    });
+    sendMessage("alert.alerting", harvestInfo);
 
-    const changeAssets = sub(currentTotalAssets, [expectedTotalAssets]);
-    logger.info(`changeAssets: ${changeAssets}`);
+    const previousBlockNumber = blockNumber - 1;
+    const previousEstimatedTotalAssets = await this._getChainData(
+      "strategyEstimatedTotalAssets",
+      strategy,
+      {
+        blockNumber: previousBlockNumber,
+      }
+    );
+    const previousTotalDebt = await this._getChainData(
+      "strategyTotalDebt",
+      contractAddress,
+      {
+        strategy,
+        blockNumber: previousBlockNumber,
+      }
+    );
 
-    const assetChangePercent = divide(changeAssets, expectedTotalAssets);
-    logger.info(`assetChangePercent: ${assetChangePercent}`);
+    logger.info(
+      `previousEstimatedTotalAssets: ${previousEstimatedTotalAssets}`
+    );
+    logger.info(`previousTotalDebt: ${previousTotalDebt}`);
 
-    // check total supply
-    const changeSupply = sub(currentTotalSupply, [previousTotalSupploy]);
-    logger.info(`changeSupply: ${changeSupply}`);
-    if (changeSupply !== "0") {
-      const totalSupplyAlertMsg = MessageTemplate.getTotalSupplyAlertMsg({
+    const expectedProfit = sub(previousEstimatedTotalAssets, [
+      previousTotalDebt,
+    ]);
+    logger.info(`expectedProfit: ${expectedProfit}`);
+
+    const profitDifference = sub(expectedProfit, [profit]);
+    logger.info(`profitDifference: ${profitDifference}`);
+
+    // send harvest warning message
+    const profitChangeBPS = percentToBPS(
+      divide(profitDifference, expectedProfit)
+    );
+    logger.info(`profitChangeBPS: ${profitChangeBPS}`);
+    if (profitChangeBPS >= 500) {
+      const msg = MessageTemplate.getPricePerShareAlertMsg({
         alertLeval: "WARN",
         blockNumber,
-        changeTotal: changeSupply,
+        changeTotal: profitDifference,
+        changeBPS: profitChangeBPS,
+        baseBPS: 500,
       });
-      sendMessage("alert.alerting", totalSupplyAlertMsg);
+      logger.info(`alert message: ${msg}`);
+      sendMessage("alert.alerting", msg);
     }
-
-    // check total assets
-    this._sendTotalAssetsAlertMessage(percentToBPS(assetChangePercent), {
-      blockNumber,
-      changeAssets,
-    });
-
-    // check price per share
-    this._checkPricePerShare(
-      currentPricePerShare,
-      previousPricePerShare,
-      blockNumber
-    );
-
-    // check locked profit
-    this._checkLockedProfit(
-      currentLockedProfit,
-      previousLockedProfit,
-      blockNumber
-    );
   }
 
   private _checkPricePerShare(
@@ -309,28 +262,6 @@ export class AlertCheckService {
       logger.info(`alert message: ${msg}`);
       sendMessage("alert.emergency", msg);
     }
-  }
-
-  private _checkLockedProfit(
-    currentLockedProfit: any,
-    previousLockedProfit: any,
-    blockNumber: number
-  ) {
-    const changeLockedProfit = sub(currentLockedProfit, [previousLockedProfit]);
-    logger.info(`ChangeLockedProfit: ${changeLockedProfit}`);
-    if (changeLockedProfit === "0") return;
-
-    const changeLockedProfitBPS = percentToBPS(
-      divide(changeLockedProfit, previousLockedProfit)
-    );
-    const msg = MessageTemplate.getLockedProfitAlertMsg({
-      alertLeval: "WARN",
-      blockNumber,
-      changeTotal: changeLockedProfit,
-      changeBPS: changeLockedProfitBPS,
-    });
-    logger.info(`alert message: ${msg}`);
-    sendMessage("alert.alerting", msg);
   }
 
   private async _getChainData(
@@ -393,36 +324,5 @@ export class AlertCheckService {
     }
     logger.info(`alert message: ${msg}`);
     sendMessage(msgRouting, msg);
-  }
-
-  private _getExpectedTotal(
-    beforeTotalAssets: any,
-    moveAssets: any,
-    eventName: string
-  ) {
-    switch (eventName) {
-      case "Deposit":
-        return plus([beforeTotalAssets, moveAssets]);
-      case "Withdraw":
-        return sub(beforeTotalAssets, [moveAssets]);
-      default:
-        logger.info(`Not fund totalAssets handler for ${eventName}`);
-    }
-  }
-
-  private _getChangedTotalSupply(
-    currentTotalSupply: any,
-    beforeTotalSupply: any,
-    moveShares: any,
-    eventName: string
-  ) {
-    switch (eventName) {
-      case "Deposit":
-        return sub(currentTotalSupply, [beforeTotalSupply, moveShares]);
-      case "Withdraw":
-        return sub(beforeTotalSupply, [currentTotalSupply, moveShares]);
-      default:
-        logger.info(`Not fund totalAssets handler for ${eventName}`);
-    }
   }
 }

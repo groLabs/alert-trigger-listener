@@ -6,7 +6,7 @@
   "author": "lily.hu@57blocks.com",
   "license": "MIT",
   "scripts": {
-    "start:listener": "cross-env NODE_ENV=mainnet node ./dist/startAlertListener.js"
+    "start:fork:listener": "cross-env NODE_ENV=fork node ./dist/startAlertListener.js"
   },
   "dependencies": {
     "@types/config": "^3.3.0",
