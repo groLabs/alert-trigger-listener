@@ -1,29 +1,49 @@
-export const rabbitmq_exchange_name = "test.inform.topic";
+export const rabbitmq_exchange_name = "develop.inform.topic";
 export const strategies = {
-  "0xBbc18b580256A82dC0F9A86152b8B22E7C1C8005": {
+  "0x74Df809b1dfC099E8cdBc98f6a8D1F5c2C3f66f8": {
     name: "convexMim",
   },
-  "0x24d41dbc3d60d0784f8a937c59FBDe51440D5140": {
+  "0x10e38eE9dd4C549b61400Fc19347D00eD3edAfC4": {
     name: "convexLusd",
   },
-  "0x313F922BE1649cEc058EC0f076664500c78bdc0b": {
+  "0x00CAC06Dd0BB4103f8b62D280fE9BCEE8f26fD59": {
     name: "convexFrax",
   },
 };
 export const EndPoints = {
-  //   ethereum: {
-  //     fullRPCEndPoint: `https://u4ybf5gmfc.execute-api.eu-west-2.amazonaws.com`,
-  //     fullWSEndPoint: `ws://ec2-13-40-62-97.eu-west-2.compute.amazonaws.com:9999`,
-  //   },
   ethereum: {
-    fullRPCEndPoint: "http://127.0.0.1:8545/",
-    fullWSEndPoint: "http://127.0.0.1:8545/",
+    fullRPCEndPoint: `https://u4ybf5gmfc.execute-api.eu-west-2.amazonaws.com`,
+    fullWSEndPoint: `ws://ec2-13-40-62-97.eu-west-2.compute.amazonaws.com:9999`,
   },
+  //   ethereum: {
+  //     fullRPCEndPoint: "http://127.0.0.1:8545/",
+  //     fullWSEndPoint: "http://127.0.0.1:8545/",
+  //   },
 };
 
 export const EthereumSubscribeConfig = {
+  GRouter: {
+    address: "0x8E45C0936fa1a65bDaD3222bEFeC6a03C83372cE",
+    events: {
+      LogDeposit: {
+        signature:
+          "event LogDeposit(address indexed sender, uint256 tokenAmount, uint256 tokenIndex,bool tranche, uint256 trancheAmount, uint256 calcAmount)",
+        alertFunction: "handleGRouterTradeMessage",
+      },
+      LogLegacyDeposit: {
+        signature:
+          "event LogLegacyDeposit(address indexed sender, uint256[3] tokenAmounts, bool tranche, uint256 trancheAmount, uint256 calcAmount)",
+        alertFunction: "handleGRouterTradeMessage",
+      },
+      LogWithdrawal: {
+        signature:
+          "event LogWithdrawal(address indexed sender, uint256 trancheAmount, uint256 tokenIndex, bool tranche, uint256 tokenAmount)",
+        alertFunction: "handleGRouterTradeMessage",
+      },
+    },
+  },
   GVault: {
-    address: "0x2e8880cAdC08E9B438c6052F5ce3869FBd6cE513",
+    address: "0x325c8Df4CFb5B068675AFF8f62aA668D1dEc3C4B",
     events: {
       Deposit: {
         signature:

@@ -1,3 +1,5 @@
+import { BigNumber } from "ethers";
+
 export interface Event {
   contractAddress: string;
   blockNumber: number;
@@ -26,4 +28,20 @@ export interface MessageObj {
   debtPaid?: string;
   debtAdded?: string;
   lockedProfit?: string;
+}
+
+export interface GrouterTradeMsgObj {
+  transactionHash: string;
+  sender: string;
+  tokenAmount: BigNumber;
+  tokenIndex?: BigNumber;
+  tokenAmounts?: BigNumber[];
+  tranche: boolean;
+  trancheAmount: BigNumber;
+  calcAmount?: BigNumber;
+}
+
+export interface TokenInfo {
+  symbol: string;
+  value: string;
 }

@@ -237,6 +237,47 @@ export class AlertCheckService {
     }
   }
 
+  public async handleGRouterTradeMessage(eventData: Event, options: any) {
+    const { blockNumber, transactionHash, contractAddress, args } = eventData;
+    const { contractName, eventName } = options;
+    const {
+      sender,
+      tokenAmount,
+      tokenAmounts,
+      tokenIndex,
+      tranche,
+      trancheAmount,
+      calcAmount,
+    } = args;
+    let msg = "";
+    switch (eventName) {
+      case "LogDeposit":
+      case "LogLegacyDeposit":
+        msg = MessageTemplate.getUserDepositTradeMsg({
+          transactionHash,
+          sender,
+          tokenAmount,
+          tokenAmounts,
+          tokenIndex,
+          tranche,
+          trancheAmount,
+          calcAmount,
+        });
+        break;
+      case "LogWithdrawal":
+        msg = MessageTemplate.getUserWithdrewTradeMsg({
+          transactionHash,
+          sender,
+          trancheAmount,
+          tokenIndex,
+          tranche,
+          tokenAmount,
+        });
+        break;
+    }
+    sendMessage("alert.alerting", msg);
+  }
+
   private _checkPricePerShare(
     currentPricePerShare: any,
     previousPricePerShare: any,
