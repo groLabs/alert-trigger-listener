@@ -1,4 +1,9 @@
-import { MessageObj, GrouterTradeMsgObj, TokenInfo } from "../utils/interface";
+import {
+  MessageObj,
+  GrouterTradeMsgObj,
+  TokenInfo,
+  GTrancheAssetChangeMsgObj,
+} from "../utils/interface";
 import { shortTXHash, getConfig, removeDecimals } from "../utils/tools";
 const strategiesConfig = getConfig("strategies");
 
@@ -80,14 +85,14 @@ export class MessageTemplate {
           depositTokenInfo.value = removeDecimals(tokenAmount.toString(), 6);
           break;
       }
-      return `[${shortSender}](${txLink}) deposit $${_calAmount} into ${tokenSymbol} (${depositTokenInfo.value} ${depositTokenInfo.symbol} -> ${_trancheAmount} ${tokenSymbol})`;
+      return `[${shortSender}](${txLink}) deposit **$${_calAmount}** into ${tokenSymbol} (${depositTokenInfo.value} ${depositTokenInfo.symbol} -> ${_trancheAmount} ${tokenSymbol})`;
     } else {
       // LogLegacyDeposit event
       const depositDAI = removeDecimals(tokenAmounts?.[0].toString(), 18);
       const depositUSDC = removeDecimals(tokenAmounts?.[1].toString(), 6);
       const depositUSDT = removeDecimals(tokenAmounts?.[2].toString(), 6);
 
-      return `[${shortSender}](${txLink}) deposit $${_calAmount} into ${tokenSymbol} (${depositDAI} DAI, ${depositUSDC} USDC, ${depositUSDT} USDT -> ${_trancheAmount} ${tokenSymbol})`;
+      return `[${shortSender}](${txLink}) deposit **$${_calAmount}** into ${tokenSymbol} (${depositDAI} DAI, ${depositUSDC} USDC, ${depositUSDT} USDT -> ${_trancheAmount} ${tokenSymbol})`;
     }
   }
 
@@ -123,6 +128,19 @@ export class MessageTemplate {
         withdrewTokenInfo.value = removeDecimals(tokenAmount.toString(), 6);
         break;
     }
-    return `[${shortSender}](${txLink}) withdrew $${withdrewTokenInfo.value} ${withdrewTokenInfo.symbol} from ${tokenSymbol} (${_trancheAmount} ${tokenSymbol} -> ${withdrewTokenInfo.value} ${withdrewTokenInfo.symbol})`;
+    return `[${shortSender}](${txLink}) withdrew **$${withdrewTokenInfo.value}** ${withdrewTokenInfo.symbol} from ${tokenSymbol} (${_trancheAmount} ${tokenSymbol} -> ${withdrewTokenInfo.value} ${withdrewTokenInfo.symbol})`;
+  }
+
+  public static getGTranchAssetChangeMsg(msgObj: GTrancheAssetChangeMsgObj) {
+    const { transactionHash, action, gvtAmount, pwrdAmount, utilization } =
+      msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    const totalTVL = gvtAmount.add(pwrdAmount);
+    const _totalTVL = removeDecimals(totalTVL.toString(), 18);
+    const _gvtAmount = removeDecimals(gvtAmount.toString(), 18);
+    const _pwrdAmount = removeDecimals(pwrdAmount.toString(), 18);
+    const _utilization = removeDecimals(utilization.toString(), 2);
+    return `[${shortTX}](${txLink}) after ${action} the Tranche's asset is **$${_totalTVL}** ($${_gvtAmount} GVT, $${_pwrdAmount} PWRD), the utilization is ${_utilization}%`;
   }
 }

@@ -1,4 +1,4 @@
-export const rabbitmq_exchange_name = "develop.inform.topic";
+export const rabbitmq_exchange_name = "testing.inform.topic";
 export const strategies = {
   "0x74Df809b1dfC099E8cdBc98f6a8D1F5c2C3f66f8": {
     name: "convexMim",
@@ -22,6 +22,21 @@ export const EndPoints = {
 };
 
 export const EthereumSubscribeConfig = {
+  GTranche: {
+    address: "0x627b9A657eac8c3463AD17009a424dFE3FDbd0b1",
+    events: {
+      LogNewDeposit: {
+        signature:
+          "event LogNewDeposit(address indexed sender, address indexed recipient, uint256 amount, uint256 index,bool indexed tranche, uint256 calcAmount)",
+        alertFunction: "handleTrancheAssetChangeMessage",
+      },
+      LogNewWithdrawal: {
+        signature:
+          "event LogNewWithdrawal(address indexed sender, address indexed recipient, uint256 amount, uint256 index,bool indexed tranche, uint256 yieldTokenAmounts, uint256 calcAmount)",
+        alertFunction: "handleTrancheAssetChangeMessage",
+      },
+    },
+  },
   GRouter: {
     address: "0x8E45C0936fa1a65bDaD3222bEFeC6a03C83372cE",
     events: {

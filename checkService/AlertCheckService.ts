@@ -1,3 +1,4 @@
+import { ethers } from "ethers";
 import { ChainHelper } from "../chainUtils/ChainHelper";
 import { RetryWrap } from "../utils/RetryWrap";
 import { Event } from "../utils/interface";
@@ -276,6 +277,40 @@ export class AlertCheckService {
         break;
     }
     sendMessage("alert.alerting", msg);
+  }
+
+  public async handleTrancheAssetChangeMessage(eventData: Event, options: any) {
+    const { transactionHash, contractAddress } = eventData;
+    const { eventName } = options;
+    const logs = await this._getChainData(
+      "logsInTransaction",
+      contractAddress,
+      {
+        tx: transactionHash,
+      }
+    );
+    const _interface = new ethers.utils.Interface([
+      "event LogNewTrancheBalance(uint256[2] balances, uint256 utilization)",
+    ]);
+    const eventTopic = _interface.getEventTopic("LogNewTrancheBalance");
+    for (let i = 0; i < logs.length; i++) {
+      let log = logs[i];
+      if (log.topics[0] === eventTopic) {
+        const decodeData = _interface.parseLog(log);
+        const action = eventName === "LogNewDeposit" ? "deposit" : "withdrew";
+        const { balances, utilization } = decodeData.args;
+        logger.info(`utilization: ${utilization}`);
+        const msg = MessageTemplate.getGTranchAssetChangeMsg({
+          transactionHash,
+          action,
+          gvtAmount: balances[0],
+          pwrdAmount: balances[1],
+          utilization,
+        });
+        sendMessage("alert.alerting", msg);
+        break;
+      }
+    }
   }
 
   private _checkPricePerShare(

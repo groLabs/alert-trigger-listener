@@ -41,6 +41,14 @@ export interface GrouterTradeMsgObj {
   calcAmount?: BigNumber;
 }
 
+export interface GTrancheAssetChangeMsgObj {
+  transactionHash: string;
+  action: "deposit" | "withdrew";
+  gvtAmount: BigNumber;
+  pwrdAmount: BigNumber;
+  utilization: BigNumber;
+}
+
 export interface TokenInfo {
   symbol: string;
   value: string;

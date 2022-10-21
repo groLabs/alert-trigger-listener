@@ -7,7 +7,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     contractAddress: string,
     options: any
   ) {
-    const { blockNumber } = options;
+    const { blockNumber, tx } = options;
     switch (functionName) {
       case "factor":
         return this._getGTokenFactor(contractAddress, blockNumber);
@@ -30,6 +30,8 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
           contractAddress,
           blockNumber
         );
+      case "logsInTransaction":
+        return this._getLogsInTransaction(tx);
       default:
         logger.error(
           `Not fund chain data function by function: ${functionName}`
@@ -263,5 +265,10 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
       .call({}, blockNumber);
     console.log(`result: ${JSON.stringify(result)}`);
     return result[fieldName];
+  }
+
+  private async _getLogsInTransaction(tx: string) {
+    const receipt = await this._web3.eth.getTransactionReceipt(tx);
+    return receipt.logs;
   }
 }
