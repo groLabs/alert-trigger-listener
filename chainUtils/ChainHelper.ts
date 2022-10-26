@@ -5,7 +5,7 @@ import { ChainDataCatcher } from "./ChainDataCatcher";
 import { EthereumChainDataCatcher } from "./EthereumChainDataCatcher";
 
 const Web3 = require("web3");
-const logger = require("../logger");
+const logger = require("../utils/logger");
 
 export class ChainHelper {
   private static _ethereumChainHelper: ChainHelper;

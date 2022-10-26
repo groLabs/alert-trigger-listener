@@ -1,6 +1,6 @@
 const Web3WsProvider = require("web3-providers-ws");
 const { errors: Web3Error } = require("web3-core-helpers");
-const logger = require("../logger");
+const logger = require("../utils/logger");
 export class WSProvider {
   private _connectionOptions: any;
   private _wsEndPoint: string;

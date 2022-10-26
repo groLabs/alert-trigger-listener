@@ -1,24 +1,28 @@
+export const rabbitmq_exchange_name = "inform";
 export const EndPoints = {
   ethereum: {
-    fullRPCEndPoint: `https://eth-mainnet.alchemyapi.io/v2/${process.env.alchemy_key}`,
-    fullWSEndPoint: `wss://eth-mainnet.alchemyapi.io/v2/${process.env.alchemy_key}`,
+    fullRPCEndPoint: `https://u4ybf5gmfc.execute-api.eu-west-2.amazonaws.com`,
+    fullWSEndPoint: `ws://ec2-13-40-62-97.eu-west-2.compute.amazonaws.com:9999`,
   },
+  //   ethereum: {
+  //     fullRPCEndPoint: "http://127.0.0.1:8545/",
+  //     fullWSEndPoint: "http://127.0.0.1:8545/",
+  //   },
 };
 
 export const EthereumSubscribeConfig = {
   GVault: {
-    handler: "handleDepositHandlerEvent",
-    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    address: "0x325c8Df4CFb5B068675AFF8f62aA668D1dEc3C4B",
     events: {
-      Transfer: {
-        topic:
-          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-        alertFunction: "checkSystemAssets",
+      Deposit: {
+        signature:
+          "event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares)",
+        alertFunction: "checkGVaultSystemAssets",
       },
-      Approval: {
-        topic:
-          "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
-        alertFunction: "checkSystemAssets",
+      Withdraw: {
+        signature:
+          "event Withdraw(address indexed caller, address indexed receiver, address indexed owner,uint256 assets, uint256 shares)",
+        alertFunction: "checkGVaultSystemAssets",
       },
     },
   },
