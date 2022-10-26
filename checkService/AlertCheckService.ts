@@ -313,6 +313,16 @@ export class AlertCheckService {
     }
   }
 
+  public async handleStopLossInitiatedMessage(eventData: Event) {
+    const { transactionHash, args } = eventData;
+    const { strategy } = args;
+    const msg = MessageTemplate.getStopLossInitiatedMsg({
+      transactionHash,
+      strategy,
+    });
+    sendMessage("alert.alerting", msg);
+  }
+
   private _checkPricePerShare(
     currentPricePerShare: any,
     previousPricePerShare: any,

@@ -3,6 +3,7 @@ import {
   GrouterTradeMsgObj,
   TokenInfo,
   GTrancheAssetChangeMsgObj,
+  StopLossInitiatedMsgObj,
 } from "../utils/interface";
 import { shortTXHash, getConfig, removeDecimals } from "../utils/tools";
 const strategiesConfig = getConfig("strategies");
@@ -43,9 +44,9 @@ export class MessageTemplate {
     const ndLockedProfit = removeDecimals(lockedProfit);
     return `[${shortTXHash(
       transactionHash
-    )}](https://etherscan.io/tx/${transactionHash}) ${
-      strategiesConfig[strategy || ""]?.name
-    } strategy does harvest action with profit: ${ndProfit}, debtPaid: ${ndDebtPaid}, debtAdded:${ndDebtAdded}, lockedProfit:${ndLockedProfit}.`;
+    )}](https://etherscan.io/tx/${transactionHash}) ${MessageTemplate._getStrategyName(
+      strategy
+    )} strategy does harvest action with profit: ${ndProfit}, debtPaid: ${ndDebtPaid}, debtAdded:${ndDebtAdded}, lockedProfit:${ndLockedProfit}.`;
   }
 
   public static getUserDepositTradeMsg(msgObj: GrouterTradeMsgObj) {
@@ -142,5 +143,18 @@ export class MessageTemplate {
     const _pwrdAmount = removeDecimals(pwrdAmount.toString(), 18);
     const _utilization = removeDecimals(utilization.toString(), 2);
     return `[${shortTX}](${txLink}) after ${action} the Tranche's asset is **$${_totalTVL}** ($${_gvtAmount} GVT, $${_pwrdAmount} PWRD), the utilization is ${_utilization}%`;
+  }
+
+  public static getStopLossInitiatedMsg(msgObj: StopLossInitiatedMsgObj) {
+    const { transactionHash, strategy } = msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
+      strategy
+    )}** start stop loss primer`;
+  }
+
+  private static _getStrategyName(strategyAddr: string = "") {
+    return strategiesConfig[strategyAddr]?.name;
   }
 }
