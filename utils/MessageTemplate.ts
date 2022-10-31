@@ -4,6 +4,7 @@ import {
   TokenInfo,
   GTrancheAssetChangeMsgObj,
   StopLossInitiatedMsgObj,
+  StopLossExecutedMsgObj,
 } from "../utils/interface";
 import { shortTXHash, getConfig, removeDecimals } from "../utils/tools";
 const strategiesConfig = getConfig("strategies");
@@ -152,6 +153,15 @@ export class MessageTemplate {
     return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
       strategy
     )}** start stop loss primer`;
+  }
+
+  public static getStopLossExecutedMsg(msgObj: StopLossExecutedMsgObj) {
+    const { transactionHash, strategy, isSuccess } = msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
+      strategy
+    )}** executed stop loss: ${isSuccess ? "Success" : "Failure"}`;
   }
 
   private static _getStrategyName(strategyAddr: string = "") {

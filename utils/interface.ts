@@ -54,6 +54,12 @@ export interface StopLossInitiatedMsgObj {
   strategy: string;
 }
 
+export interface StopLossExecutedMsgObj {
+  transactionHash: string;
+  strategy: string;
+  isSuccess: boolean;
+}
+
 export interface TokenInfo {
   symbol: string;
   value: string;
