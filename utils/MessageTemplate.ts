@@ -5,6 +5,7 @@ import {
   GTrancheAssetChangeMsgObj,
   StopLossInitiatedMsgObj,
   StopLossExecutedMsgObj,
+  StopLossCountdownMsgObj,
 } from "../utils/interface";
 import { shortTXHash, getConfig, removeDecimals } from "../utils/tools";
 const strategiesConfig = getConfig("strategies");
@@ -162,6 +163,15 @@ export class MessageTemplate {
     return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
       strategy
     )}** executed stop loss: ${isSuccess ? "Success" : "Failure"}`;
+  }
+
+  public static getStopLossCountdownMsg(msgObj: StopLossCountdownMsgObj) {
+    const { strategy, hours, minutes, seconds } = msgObj;
+    const shortAddress = shortTXHash(strategy);
+    const addressLink = `https://etherscan.io/address/${strategy}`;
+    return `[${shortAddress}](${addressLink}) strategy **${MessageTemplate._getStrategyName(
+      strategy
+    )}** stop loss has been running for ${hours} hours ${minutes} minutes ${seconds} seconds`;
   }
 
   private static _getStrategyName(strategyAddr: string = "") {

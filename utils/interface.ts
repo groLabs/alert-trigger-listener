@@ -60,7 +60,27 @@ export interface StopLossExecutedMsgObj {
   isSuccess: boolean;
 }
 
+export interface StopLossCountdownMsgObj {
+  strategy: string;
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
+
 export interface TokenInfo {
   symbol: string;
   value: string;
+}
+
+export interface CheckResult {
+  level: AlertingLevel;
+  message: string;
+  timestamp: number;
+}
+
+export enum AlertingLevel {
+  None = "none",
+  Warning = "alerting.alerting",
+  Critical = "alerting.critical",
+  Emergency = "alerting.emergency",
 }
