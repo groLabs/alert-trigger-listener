@@ -36,6 +36,12 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
           contractAddress,
           blockNumber
         );
+      case "strategyCheck":
+        return this._getStrategyCheck(
+          contractAddress,
+          options.strategy,
+          blockNumber
+        );
       case "logsInTransaction":
         return this._getLogsInTransaction(tx);
       default:
@@ -226,6 +232,50 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     return result;
   }
 
+  private async _getStrategyCheck(
+    contractAddress: string,
+    strategyAddress: string,
+    blockNumber: number
+  ) {
+    const abi = [
+      {
+        inputs: [
+          {
+            internalType: "address",
+            name: "",
+            type: "address",
+          },
+        ],
+        name: "strategyCheck",
+        outputs: [
+          {
+            internalType: "bool",
+            name: "active",
+            type: "bool",
+          },
+          {
+            internalType: "uint64",
+            name: "timeLimit",
+            type: "uint64",
+          },
+          {
+            internalType: "uint64",
+            name: "primerTimestamp",
+            type: "uint64",
+          },
+        ],
+        stateMutability: "view",
+        type: "function",
+      },
+    ];
+
+    const contract = new this._web3.eth.Contract(abi, contractAddress);
+    const result = await contract.methods
+      .strategyCheck(strategyAddress)
+      .call({}, blockNumber);
+    return result;
+  }
+
   private async _getStrategyTotalDebt(
     gVaultAddress: string,
     strategyAddress: string,
@@ -302,7 +352,6 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     const result = await contract.methods
       .strategies(strategyAddress)
       .call({}, blockNumber);
-    console.log(`result: ${JSON.stringify(result)}`);
     return result[fieldName];
   }
 
