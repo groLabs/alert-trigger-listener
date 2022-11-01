@@ -84,6 +84,10 @@ export class MessageTemplate {
           depositTokenInfo.symbol = "USDT";
           depositTokenInfo.value = removeDecimals(tokenAmount.toString(), 6);
           break;
+        case "3":
+          depositTokenInfo.symbol = "3CRV";
+          depositTokenInfo.value = removeDecimals(tokenAmount.toString(), 18);
+          break;
       }
       return `[${shortSender}](${txLink}) deposit **$${_calAmount}** into ${tokenSymbol} (${depositTokenInfo.value} ${depositTokenInfo.symbol} -> ${_trancheAmount} ${tokenSymbol})`;
     } else {
@@ -127,8 +131,12 @@ export class MessageTemplate {
         withdrewTokenInfo.symbol = "USDT";
         withdrewTokenInfo.value = removeDecimals(tokenAmount.toString(), 6);
         break;
+      case "3":
+        withdrewTokenInfo.symbol = "3CRV";
+        withdrewTokenInfo.value = removeDecimals(tokenAmount.toString(), 18);
+        break;
     }
-    return `[${shortSender}](${txLink}) withdrew **$${withdrewTokenInfo.value}** ${withdrewTokenInfo.symbol} from ${tokenSymbol} (${_trancheAmount} ${tokenSymbol} -> ${withdrewTokenInfo.value} ${withdrewTokenInfo.symbol})`;
+    return `[${shortSender}](${txLink}) withdrew **${withdrewTokenInfo.value}** ${withdrewTokenInfo.symbol} from ${tokenSymbol} (${_trancheAmount} ${tokenSymbol} -> ${withdrewTokenInfo.value} ${withdrewTokenInfo.symbol})`;
   }
 
   public static getGTranchAssetChangeMsg(msgObj: GTrancheAssetChangeMsgObj) {
