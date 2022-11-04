@@ -60,6 +60,13 @@ export interface StopLossExecutedMsgObj {
   isSuccess: boolean;
 }
 
+export interface StrategyHarvestFailureMsgObj {
+  transactionHash: string;
+  strategy: string;
+  reason: string;
+  lowLevelData: string;
+}
+
 export interface TokenInfo {
   symbol: string;
   value: string;

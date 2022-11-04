@@ -336,6 +336,19 @@ export class AlertCheckService {
     sendMessage("alert.alerting", msg);
   }
 
+  public async handleStrategyHarvestFailureMessage(eventData: Event) {
+    const { transactionHash, args } = eventData;
+    const { strategy, reason, lowLevelData } = args;
+
+    const msg = MessageTemplate.getStrategyHarvestFailureMsg({
+      transactionHash,
+      strategy,
+      reason,
+      lowLevelData,
+    });
+    sendMessage("alert.alerting", msg);
+  }
+
   private _checkPricePerShare(
     currentPricePerShare: any,
     previousPricePerShare: any,

@@ -5,8 +5,10 @@ import {
   GTrancheAssetChangeMsgObj,
   StopLossInitiatedMsgObj,
   StopLossExecutedMsgObj,
+  StrategyHarvestFailureMsgObj,
 } from "../utils/interface";
 import { shortTXHash, getConfig, removeDecimals } from "../utils/tools";
+import { StrategyErrors } from "../utils/constant";
 const strategiesConfig = getConfig("strategies");
 
 export class MessageTemplate {
@@ -164,7 +166,27 @@ export class MessageTemplate {
     )}** executed stop loss: ${isSuccess ? "Success" : "Failure"}`;
   }
 
+  public static getStrategyHarvestFailureMsg(
+    msgObj: StrategyHarvestFailureMsgObj
+  ) {
+    const { transactionHash, strategy, reason, lowLevelData } = msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    let msg = reason;
+    if (msg == "") {
+      msg = MessageTemplate._getReadableErrorMsg(lowLevelData);
+    }
+    if (!msg) msg = lowLevelData;
+    return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
+      strategy
+    )}** harvest failed for ${msg}`;
+  }
+
   private static _getStrategyName(strategyAddr: string = "") {
     return strategiesConfig[strategyAddr]?.name;
+  }
+
+  private static _getReadableErrorMsg(code: string): string {
+    return StrategyErrors[code];
   }
 }
