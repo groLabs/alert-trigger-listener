@@ -327,13 +327,24 @@ export class AlertCheckService {
   public async handleStopLossExecutedMessage(eventData: Event) {
     const { transactionHash, args } = eventData;
     const { strategy, success } = args;
-    console.log(`strategy: ${strategy}, success: ${success}`);
     const msg = MessageTemplate.getStopLossExecutedMsg({
       transactionHash,
       strategy,
       isSuccess: success,
     });
     sendMessage("alert.alerting", msg);
+  }
+
+  public async handleStopLossEndedMessage(eventData: Event) {
+    const { transactionHash, args } = eventData;
+    const { strategy, active } = args;
+    if (active) {
+      const msg = MessageTemplate.getStopLossEndedMsg({
+        transactionHash,
+        strategy,
+      });
+      sendMessage("alert.alerting", msg);
+    }
   }
 
   public async handleStrategyHarvestFailureMessage(eventData: Event) {

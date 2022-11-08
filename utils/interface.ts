@@ -49,7 +49,7 @@ export interface GTrancheAssetChangeMsgObj {
   utilization: BigNumber;
 }
 
-export interface StopLossInitiatedMsgObj {
+export interface StopLossInitiatedOrEndedMsgObj {
   transactionHash: string;
   strategy: string;
 }

@@ -3,7 +3,7 @@ import {
   GrouterTradeMsgObj,
   TokenInfo,
   GTrancheAssetChangeMsgObj,
-  StopLossInitiatedMsgObj,
+  StopLossInitiatedOrEndedMsgObj,
   StopLossExecutedMsgObj,
   StrategyHarvestFailureMsgObj,
 } from "../utils/interface";
@@ -148,7 +148,9 @@ export class MessageTemplate {
     return `[${shortTX}](${txLink}) after ${action} the Tranche's asset is **$${_totalTVL}** ($${_gvtAmount} GVT, $${_pwrdAmount} PWRD), the utilization is ${_utilization}%`;
   }
 
-  public static getStopLossInitiatedMsg(msgObj: StopLossInitiatedMsgObj) {
+  public static getStopLossInitiatedMsg(
+    msgObj: StopLossInitiatedOrEndedMsgObj
+  ) {
     const { transactionHash, strategy } = msgObj;
     const shortTX = shortTXHash(transactionHash);
     const txLink = `https://etherscan.io/tx/${transactionHash}`;
@@ -164,6 +166,15 @@ export class MessageTemplate {
     return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
       strategy
     )}** executed stop loss: ${isSuccess ? "Success" : "Failure"}`;
+  }
+
+  public static getStopLossEndedMsg(msgObj: StopLossInitiatedOrEndedMsgObj) {
+    const { transactionHash, strategy } = msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
+      strategy
+    )}** end stop loss primer`;
   }
 
   public static getStrategyHarvestFailureMsg(
