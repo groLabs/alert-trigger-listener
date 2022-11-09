@@ -188,7 +188,7 @@ export class AlertCheckService {
       debtAdded,
       lockedProfit,
     });
-    sendMessage("alert.alerting", harvestInfo);
+    sendMessage("trade.info", harvestInfo);
 
     const previousBlockNumber = blockNumber - 1;
     const previousEstimatedTotalAssets = await this._getChainData(
@@ -276,7 +276,7 @@ export class AlertCheckService {
         });
         break;
     }
-    sendMessage("alert.alerting", msg);
+    sendMessage("trade.info", msg);
   }
 
   public async handleTrancheAssetChangeMessage(eventData: Event, options: any) {
@@ -307,7 +307,7 @@ export class AlertCheckService {
           pwrdAmount: balances[1],
           utilization,
         });
-        sendMessage("alert.alerting", msg);
+        sendMessage("trade.info", msg);
         break;
       }
     }
