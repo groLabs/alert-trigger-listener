@@ -6,10 +6,11 @@ import {
   StopLossInitiatedOrEndedMsgObj,
   StopLossExecutedMsgObj,
   StrategyHarvestFailureMsgObj,
+  metapoolTVLAlertMsgObj,
 } from "../utils/interface";
-import { shortTXHash, getConfig, removeDecimals } from "../utils/tools";
+import { shortTXHash, removeDecimals } from "../utils/tools";
 import { StrategyErrors } from "../utils/constant";
-const strategiesConfig = getConfig("strategies");
+import { StrategyConfig } from "../utils/StrategyConfig";
 
 export class MessageTemplate {
   public static getTotalAssetAlertMsg(msgObj: MessageObj) {
@@ -47,8 +48,8 @@ export class MessageTemplate {
     const ndLockedProfit = removeDecimals(lockedProfit);
     return `[${shortTXHash(
       transactionHash
-    )}](https://etherscan.io/tx/${transactionHash}) ${MessageTemplate._getStrategyName(
-      strategy
+    )}](https://etherscan.io/tx/${transactionHash}) ${StrategyConfig.getStrategyConfig().getStrategyName(
+      strategy || ""
     )} strategy does harvest action with profit: ${ndProfit}, debtPaid: ${ndDebtPaid}, debtAdded:${ndDebtAdded}, lockedProfit:${ndLockedProfit}.`;
   }
 
@@ -154,7 +155,7 @@ export class MessageTemplate {
     const { transactionHash, strategy } = msgObj;
     const shortTX = shortTXHash(transactionHash);
     const txLink = `https://etherscan.io/tx/${transactionHash}`;
-    return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
+    return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
       strategy
     )}** start stop loss primer`;
   }
@@ -163,7 +164,7 @@ export class MessageTemplate {
     const { transactionHash, strategy, isSuccess } = msgObj;
     const shortTX = shortTXHash(transactionHash);
     const txLink = `https://etherscan.io/tx/${transactionHash}`;
-    return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
+    return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
       strategy
     )}** executed stop loss: ${isSuccess ? "Success" : "Failure"}`;
   }
@@ -172,7 +173,7 @@ export class MessageTemplate {
     const { transactionHash, strategy } = msgObj;
     const shortTX = shortTXHash(transactionHash);
     const txLink = `https://etherscan.io/tx/${transactionHash}`;
-    return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
+    return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
       strategy
     )}** end stop loss primer`;
   }
@@ -188,13 +189,26 @@ export class MessageTemplate {
       msg = MessageTemplate._getReadableErrorMsg(lowLevelData);
     }
     if (!msg) msg = lowLevelData;
-    return `[${shortTX}](${txLink}) strategy **${MessageTemplate._getStrategyName(
+    return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
       strategy
     )}** harvest failed for ${msg}`;
   }
 
-  private static _getStrategyName(strategyAddr: string = "") {
-    return strategiesConfig[strategyAddr]?.name;
+  public static getMetapoolTVLAlertMsg(msgObj: metapoolTVLAlertMsgObj) {
+    const {
+      transactionHash,
+      strategy,
+      metapoolName,
+      metapoolTVL,
+      strategyTVL,
+      ratio,
+    } = msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    const curveMetaPoolLink = `https://curve.fi/#/ethereum/pools/${metapoolName}/deposit`;
+    return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
+      strategy
+    )}** asset(${strategyTVL}) has reached **${ratio}**% in [${metapoolName}](${curveMetaPoolLink}) metapool(${metapoolTVL}).`;
   }
 
   private static _getReadableErrorMsg(code: string): string {

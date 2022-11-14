@@ -9,6 +9,12 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
   ) {
     const { blockNumber, tx } = options;
     switch (functionName) {
+      case "balanceOf":
+        return this._getBalanceOf(
+          contractAddress,
+          options.account,
+          blockNumber
+        );
       case "factor":
         return this._getGTokenFactor(contractAddress, blockNumber);
       case "realizedTotalAssets":
@@ -38,6 +44,39 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
         );
         return undefined;
     }
+  }
+
+  private async _getBalanceOf(
+    contractAddress: string,
+    accountAddress: string,
+    blockNumber: number
+  ) {
+    const abi = [
+      {
+        inputs: [
+          {
+            internalType: "address",
+            name: "account",
+            type: "address",
+          },
+        ],
+        name: "balanceOf",
+        outputs: [
+          {
+            internalType: "uint256",
+            name: "",
+            type: "uint256",
+          },
+        ],
+        stateMutability: "view",
+        type: "function",
+      },
+    ];
+    const contract = new this._web3.eth.Contract(abi, contractAddress);
+    const result = await contract.methods
+      .balanceOf(accountAddress)
+      .call({}, blockNumber);
+    return result;
   }
 
   private async _getGTokenFactor(contractAddress: string, blockNumber: number) {

@@ -71,3 +71,12 @@ export interface TokenInfo {
   symbol: string;
   value: string;
 }
+
+export interface metapoolTVLAlertMsgObj {
+  transactionHash: string;
+  strategy: string;
+  metapoolName: string;
+  metapoolTVL: string;
+  strategyTVL: string;
+  ratio: string;
+}

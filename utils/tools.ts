@@ -56,6 +56,16 @@ export function removeDecimals(
   return result;
 }
 
+export function addDecimals(
+  data: string = "0",
+  decimals: number = 2,
+  precision: number = 2
+) {
+  const tempNum = BN(data.toString()).multipliedBy(BN(10).pow(decimals));
+  const result = tempNum.toFixed(precision);
+  return result;
+}
+
 export function shortTXHash(
   accountAddress: string | undefined,
   fixed: number = 6

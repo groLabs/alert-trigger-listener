@@ -3,16 +3,21 @@ import { ChainHelper } from "../chainUtils/ChainHelper";
 import { RetryWrap } from "../utils/RetryWrap";
 import { Event } from "../utils/interface";
 import {
+  getConfig,
   plus,
   sub,
   divide,
   removeDecimals,
+  addDecimals,
   percentToBPS,
 } from "../utils/tools";
 import { MessageTemplate } from "../utils/MessageTemplate";
 import { sendMessage } from "../utils/messageService";
+import { StrategyConfig } from "../utils/StrategyConfig";
 const BN = require("bignumber.js");
 const logger = require("../utils/logger");
+
+const assetRatio = getConfig("strategyAssetRatio", false) || 10;
 
 export class AlertCheckService {
   private static _alertCheckService: AlertCheckService;
@@ -360,6 +365,58 @@ export class AlertCheckService {
     sendMessage("alert.alerting", msg);
   }
 
+  public async checkMetaPoolTVL(eventData: Event, options: any) {
+    const { blockNumber, transactionHash, contractAddress } = eventData;
+    const { contractName, eventName } = options;
+    logger.info(`contractName: ${contractName}, eventName:${eventName}`);
+    const strategyAddr =
+      StrategyConfig.getStrategyConfig().getStrategyByMetapool(contractAddress);
+    if (!strategyAddr) {
+      return;
+    }
+
+    const strategyInfo = StrategyConfig.getStrategyConfig();
+    const rewardContractAddr =
+      strategyInfo.getStrategyRewardContract(strategyAddr);
+    const plToken = strategyInfo.getStrategyMetaPoolToken(strategyAddr);
+    const metaPoolTotalSupply = await this._getChainData(
+      "totalSupply",
+      plToken,
+      {
+        blockNumber,
+      }
+    );
+    const strategyPlToken = await this._getChainData(
+      "balanceOf",
+      rewardContractAddr,
+      {
+        blockNumber,
+        account: strategyAddr,
+      }
+    );
+
+    logger.info(
+      `metaPoolTotalSupply:${metaPoolTotalSupply}, strategyPlToken: ${strategyPlToken}`
+    );
+
+    const ratioStr = divide(strategyPlToken, metaPoolTotalSupply);
+    const ratio = parseFloat(addDecimals(ratioStr, 2, 2));
+    logger.info(`ratioStr:${ratioStr}, ratio: ${ratio}`);
+    if (ratio >= assetRatio) {
+      const strategyTVL = removeDecimals(strategyPlToken, 18);
+      const metapoolTVL = removeDecimals(metaPoolTotalSupply, 18);
+      const msg = MessageTemplate.getMetapoolTVLAlertMsg({
+        transactionHash,
+        strategy: strategyAddr,
+        metapoolName: contractName.toLowerCase(),
+        metapoolTVL,
+        strategyTVL,
+        ratio: ratio.toString(),
+      });
+      sendMessage("alert.alerting", msg);
+    }
+  }
+
   private _checkPricePerShare(
     currentPricePerShare: any,
     previousPricePerShare: any,
@@ -401,51 +458,5 @@ export class AlertCheckService {
       return undefined;
     });
     return result;
-  }
-
-  private _sendTotalAssetsAlertMessage(changeBPS: number, options: any) {
-    const warningLevel = 25;
-    const criticalLevel = 50;
-    const emergencyLevel = 100;
-    logger.info(`changeBPS: ${changeBPS}`);
-    if (changeBPS < warningLevel) return;
-
-    const { blockNumber, changeAssets } = options;
-    const changeTotal = removeDecimals(changeAssets, 18);
-
-    let msg, msgRouting;
-    if (changeBPS < criticalLevel) {
-      // warning message
-      msgRouting = "alert.alerting";
-      msg = MessageTemplate.getTotalAssetAlertMsg({
-        alertLeval: "WARN",
-        blockNumber,
-        changeTotal,
-        changeBPS,
-        baseBPS: warningLevel,
-      });
-    } else if (changeBPS < emergencyLevel) {
-      // critical  message
-      msgRouting = "alert.critical";
-      msg = MessageTemplate.getTotalAssetAlertMsg({
-        alertLeval: "CRIT",
-        blockNumber,
-        changeTotal,
-        changeBPS,
-        baseBPS: criticalLevel,
-      });
-    } else {
-      // emergency message
-      msgRouting = "alert.emergency";
-      msg = MessageTemplate.getTotalAssetAlertMsg({
-        alertLeval: "EMERG",
-        blockNumber,
-        changeTotal,
-        changeBPS,
-        baseBPS: emergencyLevel,
-      });
-    }
-    logger.info(`alert message: ${msg}`);
-    sendMessage(msgRouting, msg);
   }
 }
