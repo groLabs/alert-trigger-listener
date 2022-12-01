@@ -7,6 +7,7 @@ import {
   StopLossExecutedMsgObj,
   StrategyHarvestFailureMsgObj,
   metapoolTVLAlertMsgObj,
+  curvepoolSlippageAlertMsgObj,
 } from "../utils/interface";
 import { shortTXHash, removeDecimals } from "../utils/tools";
 import { StrategyErrors } from "../utils/constant";
@@ -209,6 +210,29 @@ export class MessageTemplate {
     return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
       strategy
     )}** asset(${strategyTVL}) has reached **${ratio}**% in [${metapoolName}](${curveMetaPoolLink}) metapool(${metapoolTVL}).`;
+  }
+  public static getMetaPoolSlippageInfoMsg(
+    msgObj: curvepoolSlippageAlertMsgObj
+  ) {
+    const { strategy, metapoolName, threshold, history } = msgObj;
+    const shortTX = shortTXHash(strategy);
+    const curveMetaPoolLink = `https://curve.fi/#/ethereum/pools/${metapoolName}/deposit`;
+    const contractLink = `https://etherscan.io/address/${strategy}`;
+    const strategyName =
+      StrategyConfig.getStrategyConfig().getStrategyName(strategy);
+    return `[${shortTX}](${contractLink}) **${metapoolName}** NEGATIVE MEANS WITHDRAW BONUS exotic -> base slippage: [${history}] Bps, threshold: ${threshold}, latest->before in [${metapoolName}](${curveMetaPoolLink}).`;
+  }
+
+  public static getCurvePoolSlippageInfoMsg(
+    msgObj: curvepoolSlippageAlertMsgObj
+  ) {
+    const { strategy, metapoolName, threshold, history } = msgObj;
+    const shortTX = shortTXHash(strategy);
+    const curveMetaPoolLink = `https://curve.fi/#/ethereum/pools/${metapoolName}/deposit`;
+    const contractLink = `https://etherscan.io/address/${strategy}`;
+    const strategyName =
+      StrategyConfig.getStrategyConfig().getStrategyName(strategy);
+    return `[${shortTX}](${contractLink}) **${strategyName}** NEGATIVE MEANS WITHDRAW BONUS 3CRV -> base slippage: [${history}] Bps, threshold: ${threshold}, latest->before`;
   }
 
   private static _getReadableErrorMsg(code: string): string {

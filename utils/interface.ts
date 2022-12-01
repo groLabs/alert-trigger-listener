@@ -80,3 +80,10 @@ export interface metapoolTVLAlertMsgObj {
   strategyTVL: string;
   ratio: string;
 }
+
+export interface curvepoolSlippageAlertMsgObj {
+  strategy: string;
+  metapoolName: string;
+  history: string;
+  threshold: number;
+}

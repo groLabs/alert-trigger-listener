@@ -19,6 +19,18 @@ const logger = require("../utils/logger");
 
 const assetRatio = getConfig("strategyAssetRatio", false) || 10;
 
+// aggregate curve balance change by stablecoins
+// will trigger slippage check if the aggregated token change > than threshold
+const curve3pool = "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7";
+const curveBalanceDelta = [BN(0), BN(0), BN(0)];
+const curveBalanceDecimals = [
+  BN("1000000000000000000"),
+  BN("1000000"),
+  BN("1000000"),
+];
+const curveCheckDeltaThreshold = getConfig("deltaThreshold", false) || 1000000;
+const deltaThreshold = BN(curveCheckDeltaThreshold);
+
 export class AlertCheckService {
   private static _alertCheckService: AlertCheckService;
   private _chainHelper: ChainHelper;
@@ -379,6 +391,7 @@ export class AlertCheckService {
     const rewardContractAddr =
       strategyInfo.getStrategyRewardContract(strategyAddr);
     const plToken = strategyInfo.getStrategyMetaPoolToken(strategyAddr);
+    const tokenIndex = strategyInfo.getStrategyTokenIndex(strategyAddr);
     const metaPoolTotalSupply = await this._getChainData(
       "totalSupply",
       plToken,
@@ -415,6 +428,258 @@ export class AlertCheckService {
       });
       sendMessage("alert.alerting", msg);
     }
+
+    const result = [];
+    let totalSlippageCheckFailed = true;
+    for (let i = 0; i < 6; i++) {
+      let block = blockNumber - i * 1287;
+      const sp = await this._calculateSlippage(
+        contractAddress,
+        strategyAddr,
+        block,
+        strategyPlToken,
+        tokenIndex
+      );
+      result.push(sp.totalSlippage);
+      totalSlippageCheckFailed =
+        totalSlippageCheckFailed && sp.totalSlippageAboveThreshold;
+    }
+    logger.info(`${contractName} - ${result.join("|")}`);
+    const msg = MessageTemplate.getMetaPoolSlippageInfoMsg({
+      strategy: strategyAddr,
+      metapoolName: contractName.toLowerCase(),
+      history: result.join("|"),
+      threshold: 400,
+    });
+    if (totalSlippageCheckFailed) {
+      sendMessage("slippage.alert", msg);
+    } else {
+      sendMessage("slippage.info", msg);
+    }
+  }
+
+  public async checkBaseSlippage(eventData: Event, options: any) {
+    const { blockNumber, transactionHash, contractAddress, args } = eventData;
+    const { contractName, eventName } = options;
+
+    if (this._checkCurveBalanceDelta(eventData, options)) {
+      const strategyInfo = StrategyConfig.getStrategyConfig();
+      const strategies = strategyInfo.getStrategies();
+      for (let s = 0; s < strategies.length; s += 1) {
+        const strategyAddr = strategies[s];
+        const rewardContractAddr =
+          strategyInfo.getStrategyRewardContract(strategyAddr);
+        const metapoolAddress = strategyInfo.getStrategyMetaPool(strategyAddr);
+        const tokenIndex = strategyInfo.getStrategyTokenIndex(strategyAddr);
+        const strategyMetapoolName =
+          strategyInfo.getStrategyMetaPoolName(strategyAddr);
+        logger.info(
+          `strategyAddr ${strategyAddr} rewardContractAddr ${rewardContractAddr} tokenIndex ${tokenIndex}`
+        );
+        const baseSlippageResult = [];
+        const totalSlippageResult = [];
+
+        let baseSlippageCheckFailed = true;
+        let totalSlippageCheckFailed = true;
+        for (let i = 0; i < 6; i++) {
+          let block = blockNumber - i * 1287;
+          const strategyPlToken = await this._getChainData(
+            "balanceOf",
+            rewardContractAddr,
+            {
+              block,
+              account: strategyAddr,
+            }
+          );
+          const sp = await this._calculateSlippage(
+            metapoolAddress,
+            strategyAddr,
+            block,
+            strategyPlToken,
+            tokenIndex
+          );
+          baseSlippageResult.push(sp.pool3crvSlippage);
+          baseSlippageCheckFailed =
+            baseSlippageCheckFailed && sp.pool3crvSlippageAboveThreshold;
+          totalSlippageResult.push(sp.totalSlippage);
+          totalSlippageCheckFailed =
+            totalSlippageCheckFailed && sp.totalSlippageAboveThreshold;
+        }
+
+        logger.info(
+          `${blockNumber} ${contractName} - ${baseSlippageResult.join("|")}`
+        );
+        const msgBaseSlippage = MessageTemplate.getCurvePoolSlippageInfoMsg({
+          strategy: strategyAddr,
+          metapoolName: contractName.toLowerCase(),
+          history: baseSlippageResult.join("|"),
+          threshold: 400,
+        });
+        if (baseSlippageCheckFailed) {
+          sendMessage("slippage.alert", msgBaseSlippage);
+        } else {
+          sendMessage("slippage.info", msgBaseSlippage);
+        }
+
+        const msgTotalSlippage = MessageTemplate.getMetaPoolSlippageInfoMsg({
+          strategy: strategyAddr,
+          metapoolName: strategyMetapoolName.toLowerCase(),
+          history: totalSlippageResult.join("|"),
+          threshold: 400,
+        });
+        if (totalSlippageCheckFailed) {
+          sendMessage("slippage.alert", msgTotalSlippage);
+        } else {
+          sendMessage("slippage.info", msgTotalSlippage);
+        }
+      }
+    }
+  }
+
+  private _checkCurveBalanceDelta(eventData: Event, options: any) {
+    const { blockNumber, transactionHash, contractAddress, args } = eventData;
+    const { contractName, eventName } = options;
+    if (eventName == "AddLiquidity") {
+      const { tokenAmounts } = args;
+      //   logger.info(`eventName:${eventName} tokenAmounts ${tokenAmounts}`);
+      for (let index = 0; index < 3; index += 1) {
+        curveBalanceDelta[index] = curveBalanceDelta[index].plus(
+          BN(tokenAmounts[index].toString())
+        );
+      }
+    } else if (
+      eventName == "RemoveLiquidityImbalance" ||
+      eventName == "RemoveLiquidity"
+    ) {
+      const { tokenAmounts } = args;
+      logger.info(`eventName:${eventName} tokenAmounts ${tokenAmounts}`);
+      for (let index = 0; index < 3; index += 1) {
+        curveBalanceDelta[index] = curveBalanceDelta[index].minus(
+          BN(tokenAmounts[index].toString())
+        );
+      }
+    } else if (eventName == "RemoveLiquidityOne") {
+      const { tokenAmount } = args;
+      logger.info(`eventName:${eventName} tokenAmounts ${tokenAmount}`);
+    } else if (eventName == "TokenExchange") {
+      const { sold_id, tokens_sold, bought_id, tokens_bought } = args;
+      //   logger.info(
+      //     `eventName:${eventName} sold_id ${sold_id} tokens_sold ${tokens_sold} bought_id ${bought_id} tokens_bought ${tokens_bought}`
+      //   );
+      curveBalanceDelta[sold_id] = curveBalanceDelta[sold_id].minus(
+        BN(tokens_sold.toString())
+      );
+      curveBalanceDelta[bought_id] = curveBalanceDelta[bought_id].plus(
+        BN(tokens_bought.toString())
+      );
+    }
+    let needReset = false;
+    for (let index = 0; index < 3; index += 1) {
+      const usdDelta = curveBalanceDelta[index].dividedBy(
+        curveBalanceDecimals[index]
+      );
+      logger.info(`curveBalanceDelta ${index} ${usdDelta}`);
+      if (usdDelta.abs().isGreaterThan(deltaThreshold)) {
+        needReset = true;
+        break;
+      }
+    }
+    if (needReset) {
+      logger.info("balance change is big enough! need to reset");
+      for (let index = 0; index < 3; index += 1) {
+        curveBalanceDelta[index] = BN(0);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  private async _calculateSlippage(
+    contractAddress: string,
+    strategyAddr: string,
+    blockNumber: number,
+    strategyLpToken: string,
+    tokenIndex: number
+  ) {
+    const indexOf3crvInMetapool = 1;
+    const DECIMALS = BN("1000000000000000000");
+    // slippage check
+    let metaWithdrawOneCoin = await this._getChainData(
+      "calcWithdrawOneCoin",
+      contractAddress,
+      {
+        blockNumber,
+        tokenAmount: strategyLpToken,
+        index: indexOf3crvInMetapool,
+      }
+    );
+
+    let metaVirtualPrice = await this._getChainData(
+      "getVirtualPrice",
+      contractAddress,
+      {
+        blockNumber,
+        account: strategyAddr,
+      }
+    );
+
+    let curveWithdrawOneCoin = await this._getChainData(
+      "calcWithdrawOneCoin",
+      curve3pool,
+      {
+        blockNumber,
+        tokenAmount: metaWithdrawOneCoin,
+        index: tokenIndex,
+      }
+    );
+
+    curveWithdrawOneCoin = BN(curveWithdrawOneCoin);
+    metaWithdrawOneCoin = BN(metaWithdrawOneCoin).dividedBy(DECIMALS);
+    metaVirtualPrice = BN(metaVirtualPrice).dividedBy(DECIMALS);
+
+    // adjust for usdc and usdt
+    if (tokenIndex > 0) {
+      curveWithdrawOneCoin = curveWithdrawOneCoin.dividedBy(BN("1000000"));
+    } else {
+      curveWithdrawOneCoin = curveWithdrawOneCoin.dividedBy(DECIMALS);
+    }
+
+    let virtualPrice = await this._getChainData("getVirtualPrice", curve3pool, {
+      blockNumber,
+      account: strategyAddr,
+    });
+    virtualPrice = BN(virtualPrice).dividedBy(DECIMALS);
+    const strategyLPToken = BN(strategyLpToken).dividedBy(DECIMALS);
+    const expected = strategyLPToken.multipliedBy(metaVirtualPrice);
+
+    const slippage = expected
+      .minus(metaWithdrawOneCoin.multipliedBy(virtualPrice))
+      .dividedBy(expected);
+
+    const ONE = BN(1);
+    // 1 - stableCoinAmount / 3crvAmount * virtualPrice
+    const pool3crvSlippage = ONE.minus(
+      curveWithdrawOneCoin.dividedBy(
+        metaWithdrawOneCoin.multipliedBy(virtualPrice)
+      )
+    );
+
+    // 1 -  ((1 - slippage) * (1 - baseSlippage)
+    const totalSlippage = ONE.minus(
+      ONE.minus(slippage).multipliedBy(ONE.minus(pool3crvSlippage))
+    );
+
+    const threshold = BN(400);
+    return {
+      totalSlippage: totalSlippage.multipliedBy(BN(10000)).toFixed(2),
+      totalSlippageAboveThreshold: totalSlippage
+        .multipliedBy(BN(10000))
+        .isGreaterThan(threshold),
+      pool3crvSlippage: pool3crvSlippage.multipliedBy(BN(10000)).toFixed(2),
+      pool3crvSlippageAboveThreshold: pool3crvSlippage
+        .multipliedBy(BN(10000))
+        .isGreaterThan(threshold),
+    };
   }
 
   private _checkPricePerShare(
