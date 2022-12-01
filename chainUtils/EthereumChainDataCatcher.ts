@@ -42,6 +42,15 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
           options.strategy,
           blockNumber
         );
+      case "calcWithdrawOneCoin":
+        return this._getCalcWithdrawOneCoin(
+          contractAddress,
+          options.tokenAmount,
+          options.index,
+          blockNumber
+        );
+      case "getVirtualPrice":
+        return this._getVirtualPrice(contractAddress, blockNumber);
       case "logsInTransaction":
         return this._getLogsInTransaction(tx);
       default:
@@ -205,29 +214,64 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     return result;
   }
 
-  private async _getStrategyEstimatedTotalAssets(
+  private async _getCalcWithdrawOneCoin(
     contractAddress: string,
+    tokenAmount: number,
+    index: number,
     blockNumber: number
   ) {
     const abi = [
       {
-        inputs: [],
-        name: "estimatedTotalAssets",
+        name: "calc_withdraw_one_coin",
         outputs: [
           {
-            internalType: "uint256",
-            name: "",
             type: "uint256",
+            name: "",
+          },
+        ],
+        inputs: [
+          {
+            type: "uint256",
+            name: "_token_amount",
+          },
+          {
+            type: "int128",
+            name: "i",
           },
         ],
         stateMutability: "view",
         type: "function",
+        gas: 1102,
       },
     ];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
     const result = await contract.methods
-      .estimatedTotalAssets()
+      .calc_withdraw_one_coin(tokenAmount, index)
+      .call({}, blockNumber);
+    return result;
+  }
+
+  private async _getVirtualPrice(contractAddress: string, blockNumber: number) {
+    const abi = [
+      {
+        name: "get_virtual_price",
+        outputs: [
+          {
+            type: "uint256",
+            name: "",
+          },
+        ],
+        inputs: [],
+        stateMutability: "view",
+        type: "function",
+        gas: 1133537,
+      },
+    ];
+
+    const contract = new this._web3.eth.Contract(abi, contractAddress);
+    const result = await contract.methods
+      .get_virtual_price()
       .call({}, blockNumber);
     return result;
   }
@@ -358,5 +402,32 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
   private async _getLogsInTransaction(tx: string) {
     const receipt = await this._web3.eth.getTransactionReceipt(tx);
     return receipt.logs;
+  }
+
+  private async _getStrategyEstimatedTotalAssets(
+    contractAddress: string,
+    blockNumber: number
+  ) {
+    const abi = [
+      {
+        inputs: [],
+        name: "estimatedTotalAssets",
+        outputs: [
+          {
+            internalType: "uint256",
+            name: "",
+            type: "uint256",
+          },
+        ],
+        stateMutability: "view",
+        type: "function",
+      },
+    ];
+
+    const contract = new this._web3.eth.Contract(abi, contractAddress);
+    const result = await contract.methods
+      .estimatedTotalAssets()
+      .call({}, blockNumber);
+    return result;
   }
 }
