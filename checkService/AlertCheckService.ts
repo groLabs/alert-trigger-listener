@@ -124,7 +124,7 @@ export class AlertCheckService {
       logger.info(`changeAssets: ${changeAssets}`);
 
       const totalAssetAlertMsg = MessageTemplate.getTotalAssetAlertMsg({
-        alertLeval: "WARN",
+        alertLevel: "WARN",
         blockNumber,
         changeTotal: changeAssets,
       });
@@ -141,7 +141,7 @@ export class AlertCheckService {
       const changeSupply = sub(currentTotalSupply, [expectedTotalSupply]);
       logger.info(`changeSupply: ${changeSupply}`);
       const totalSupplyAlertMsg = MessageTemplate.getTotalSupplyAlertMsg({
-        alertLeval: "WARN",
+        alertLevel: "WARN",
         blockNumber,
         changeTotal: changeSupply,
       });
@@ -162,7 +162,7 @@ export class AlertCheckService {
         previousLockedProfit,
       ]);
       const msg = MessageTemplate.getLockedProfitAlertMsg({
-        alertLeval: "WARN",
+        alertLevel: "WARN",
         blockNumber,
         changeTotal: changeLockedProfit,
       });
@@ -232,7 +232,7 @@ export class AlertCheckService {
     logger.info(`profitChangeBPS: ${profitChangeBPS}`);
     if (profitChangeBPS >= 500) {
       const msg = MessageTemplate.getPricePerShareAlertMsg({
-        alertLeval: "WARN",
+        alertLevel: "WARN",
         blockNumber,
         changeTotal: profitDifference,
         changeBPS: profitChangeBPS,
@@ -433,14 +433,15 @@ export class AlertCheckService {
     );
     if (pricePerShareChangeBPS >= 1) {
       const msg = MessageTemplate.getPricePerShareAlertMsg({
-        alertLeval: "EMERG",
+        alertLevel: "EMERG",
         blockNumber,
         changeTotal: changePricePerShare,
         changeBPS: pricePerShareChangeBPS,
         baseBPS: 1,
       });
       logger.info(`alert message: ${msg}`);
-      sendMessage("alert.emergency", msg);
+      const msgWithId = `msg_id: GVault_Price_Per_Share ${msg}`;
+      sendMessage("alert.emergency", msgWithId);
     }
   }
 

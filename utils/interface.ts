@@ -15,7 +15,7 @@ export interface retryOptions {
 }
 
 export interface MessageObj {
-  alertLeval?: string;
+  alertLevel?: string;
   blockNumber?: number;
   transactionHash?: string;
   changeTotal?: number;
