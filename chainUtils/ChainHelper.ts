@@ -86,6 +86,11 @@ export class ChainHelper {
     return this._wsProvider;
   }
 
+  async getBlockNumber() {
+    const blockNumber = await this._web3.eth.getBlockNumber();
+    return blockNumber;
+  }
+
   toString(): string {
     return `rpc provider's endPoint: ${this._rpcProvider.rpcEndPoint}; ws provider's endPoint: ${this._wsProvider.wsEndPoint}`;
   }

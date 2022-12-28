@@ -7,6 +7,7 @@ import {
   StopLossExecutedMsgObj,
   StrategyHarvestFailureMsgObj,
   metapoolTVLAlertMsgObj,
+  StopLossCountdownMsgObj,
 } from "../utils/interface";
 import { shortTXHash, removeDecimals } from "../utils/tools";
 import { StrategyErrors } from "../utils/constant";
@@ -213,5 +214,14 @@ export class MessageTemplate {
 
   private static _getReadableErrorMsg(code: string): string {
     return StrategyErrors[code];
+  }
+
+  public static getStopLossCountdownMsg(msgObj: StopLossCountdownMsgObj) {
+    const { strategy, hours, minutes, seconds } = msgObj;
+    const shortAddress = shortTXHash(strategy);
+    const addressLink = `https://etherscan.io/address/${strategy}`;
+    return `[${shortAddress}](${addressLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
+      strategy
+    )}** stop loss has been running for ${hours} hours ${minutes} minutes ${seconds} seconds`;
   }
 }
