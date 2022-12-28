@@ -100,3 +100,10 @@ export enum AlertingLevel {
   Critical = "alerting.critical",
   Emergency = "alerting.emergency",
 }
+
+export interface curvepoolSlippageAlertMsgObj {
+  strategy: string;
+  metapoolName: string;
+  history: string;
+  threshold: number;
+}
