@@ -6,10 +6,9 @@
   "author": "lily.hu@57blocks.com",
   "license": "MIT",
   "scripts": {
-    "start:develop:listener": "cross-env NODE_ENV=develop node ./dist/startAlertListener.js",
-    "start:metapool:listener": "cross-env NODE_ENV=metapool node ./dist/startAlertListener.js",
     "start:fork:listener": "cross-env NODE_ENV=fork node ./dist/startAlertListener.js",
-    "start:mainnet:listener": "cross-env NODE_ENV=mainnet node ./dist/startAlertListener.js"
+    "start:mainnet:listener": "cross-env NODE_ENV=mainnet node ./dist/startAlertListener.js",
+    "start:g2internal:listener": "cross-env NODE_ENV=g2internal node ./dist/startAlertListener.js"
   },
   "dependencies": {
     "@types/config": "^3.3.0",
@@ -23,6 +22,7 @@
     "dotenv": "^16.0.3",
     "ethers": "^5.7.1",
     "lodash": "^4.17.21",
+    "node-schedule": "^2.1.0",
     "ts-node": "^10.9.1",
     "typescript": "^4.8.4",
     "web3": "^1.8.0",
