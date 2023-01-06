@@ -1,5 +1,18 @@
 const logger = require("../utils/logger");
 import { ChainDataCatcher } from "./ChainDataCatcher";
+import {
+  balanceOf,
+  factor,
+  realizedTotalAssets,
+  totalSupply,
+  getPricePerShare,
+  lockedProfit,
+  calcWithdrawOneCoin,
+  getVirtualPrice,
+  strategyCheck,
+  strategies,
+  estimatedTotalAssets,
+} from "./DataCatcherABI";
 
 export class EthereumChainDataCatcher extends ChainDataCatcher {
   public async getChainData(
@@ -66,27 +79,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     accountAddress: string,
     blockNumber: number
   ) {
-    const abi = [
-      {
-        inputs: [
-          {
-            internalType: "address",
-            name: "account",
-            type: "address",
-          },
-        ],
-        name: "balanceOf",
-        outputs: [
-          {
-            internalType: "uint256",
-            name: "",
-            type: "uint256",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ];
+    const abi = [balanceOf];
     const contract = new this._web3.eth.Contract(abi, contractAddress);
     const result = await contract.methods
       .balanceOf(accountAddress)
@@ -95,21 +88,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
   }
 
   private async _getGTokenFactor(contractAddress: string, blockNumber: number) {
-    const abi = [
-      {
-        inputs: [],
-        name: "factor",
-        outputs: [
-          {
-            internalType: "uint256",
-            name: "",
-            type: "uint256",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ];
+    const abi = [factor];
 
     const gtoken = new this._web3.eth.Contract(abi, contractAddress);
     const result = await gtoken.methods.factor().call({}, blockNumber);
@@ -120,21 +99,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     contractAddress: string,
     blockNumber: number
   ) {
-    const abi = [
-      {
-        inputs: [],
-        name: "realizedTotalAssets",
-        outputs: [
-          {
-            internalType: "uint256",
-            name: "",
-            type: "uint256",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ];
+    const abi = [realizedTotalAssets];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
     const result = await contract.methods
@@ -144,21 +109,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
   }
 
   private async _getTotalSupply(contractAddress: string, blockNumber: number) {
-    const abi = [
-      {
-        inputs: [],
-        name: "totalSupply",
-        outputs: [
-          {
-            internalType: "uint256",
-            name: "",
-            type: "uint256",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ];
+    const abi = [totalSupply];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
     const result = await contract.methods.totalSupply().call({}, blockNumber);
@@ -169,21 +120,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     contractAddress: string,
     blockNumber: number
   ) {
-    const abi = [
-      {
-        inputs: [],
-        name: "getPricePerShare",
-        outputs: [
-          {
-            internalType: "uint256",
-            name: "",
-            type: "uint256",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ];
+    const abi = [getPricePerShare];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
     const result = await contract.methods
@@ -193,21 +130,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
   }
 
   private async _getLockedProfit(contractAddress: string, blockNumber: number) {
-    const abi = [
-      {
-        inputs: [],
-        name: "lockedProfit",
-        outputs: [
-          {
-            internalType: "uint256",
-            name: "",
-            type: "uint256",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ];
+    const abi = [lockedProfit];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
     const result = await contract.methods.lockedProfit().call({}, blockNumber);
@@ -220,30 +143,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     index: number,
     blockNumber: number
   ) {
-    const abi = [
-      {
-        name: "calc_withdraw_one_coin",
-        outputs: [
-          {
-            type: "uint256",
-            name: "",
-          },
-        ],
-        inputs: [
-          {
-            type: "uint256",
-            name: "_token_amount",
-          },
-          {
-            type: "int128",
-            name: "i",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-        gas: 1102,
-      },
-    ];
+    const abi = [calcWithdrawOneCoin];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
     const result = await contract.methods
@@ -253,21 +153,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
   }
 
   private async _getVirtualPrice(contractAddress: string, blockNumber: number) {
-    const abi = [
-      {
-        name: "get_virtual_price",
-        outputs: [
-          {
-            type: "uint256",
-            name: "",
-          },
-        ],
-        inputs: [],
-        stateMutability: "view",
-        type: "function",
-        gas: 1133537,
-      },
-    ];
+    const abi = [getVirtualPrice];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
     const result = await contract.methods
@@ -281,37 +167,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     strategyAddress: string,
     blockNumber: number
   ) {
-    const abi = [
-      {
-        inputs: [
-          {
-            internalType: "address",
-            name: "",
-            type: "address",
-          },
-        ],
-        name: "strategyCheck",
-        outputs: [
-          {
-            internalType: "bool",
-            name: "active",
-            type: "bool",
-          },
-          {
-            internalType: "uint64",
-            name: "timeLimit",
-            type: "uint64",
-          },
-          {
-            internalType: "uint64",
-            name: "primerTimestamp",
-            type: "uint64",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ];
+    const abi = [strategyCheck];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
     const result = await contract.methods
@@ -339,59 +195,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     blockNumber: number,
     fieldName: string
   ) {
-    const abi = [
-      {
-        inputs: [
-          {
-            internalType: "address",
-            name: "_address",
-            type: "address",
-          },
-        ],
-        name: "strategies",
-        outputs: [
-          {
-            components: [
-              {
-                internalType: "bool",
-                name: "active",
-                type: "bool",
-              },
-              {
-                internalType: "uint256",
-                name: "debtRatio",
-                type: "uint256",
-              },
-              {
-                internalType: "uint256",
-                name: "lastReport",
-                type: "uint256",
-              },
-              {
-                internalType: "uint256",
-                name: "totalDebt",
-                type: "uint256",
-              },
-              {
-                internalType: "uint256",
-                name: "totalGain",
-                type: "uint256",
-              },
-              {
-                internalType: "uint256",
-                name: "totalLoss",
-                type: "uint256",
-              },
-            ],
-            internalType: "struct StrategyParams",
-            name: "",
-            type: "tuple",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ];
+    const abi = [strategies];
     const contract = new this._web3.eth.Contract(abi, gVaultAddress);
     const result = await contract.methods
       .strategies(strategyAddress)
@@ -408,21 +212,7 @@ export class EthereumChainDataCatcher extends ChainDataCatcher {
     contractAddress: string,
     blockNumber: number
   ) {
-    const abi = [
-      {
-        inputs: [],
-        name: "estimatedTotalAssets",
-        outputs: [
-          {
-            internalType: "uint256",
-            name: "",
-            type: "uint256",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ];
+    const abi = [estimatedTotalAssets];
 
     const contract = new this._web3.eth.Contract(abi, contractAddress);
     const result = await contract.methods
