@@ -15,7 +15,7 @@ export interface retryOptions {
 }
 
 export interface MessageObj {
-  alertLeval?: string;
+  alertLevel?: string;
   blockNumber?: number;
   transactionHash?: string;
   changeTotal?: number;
@@ -49,7 +49,61 @@ export interface GTrancheAssetChangeMsgObj {
   utilization: BigNumber;
 }
 
+export interface StopLossInitiatedOrEndedMsgObj {
+  transactionHash: string;
+  strategy: string;
+}
+
+export interface StopLossExecutedMsgObj {
+  transactionHash: string;
+  strategy: string;
+  isSuccess: boolean;
+}
+
+export interface StrategyHarvestFailureMsgObj {
+  transactionHash: string;
+  strategy: string;
+  reason: string;
+  lowLevelData: string;
+}
+
+export interface StopLossCountdownMsgObj {
+  strategy: string;
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
+
 export interface TokenInfo {
   symbol: string;
   value: string;
+}
+
+export interface metapoolTVLAlertMsgObj {
+  transactionHash: string;
+  strategy: string;
+  metapoolName: string;
+  metapoolTVL: string;
+  strategyTVL: string;
+  ratio: string;
+}
+
+export interface CheckResult {
+  level: AlertingLevel;
+  message: string;
+  timestamp: number;
+}
+
+export enum AlertingLevel {
+  None = "none",
+  Warning = "alerting.alerting",
+  Critical = "alerting.critical",
+  Emergency = "alerting.emergency",
+}
+
+export interface curvepoolSlippageAlertMsgObj {
+  strategy: string;
+  metapoolName: string;
+  history: string;
+  threshold: number;
 }

@@ -3,29 +3,36 @@ import {
   GrouterTradeMsgObj,
   TokenInfo,
   GTrancheAssetChangeMsgObj,
+  StopLossInitiatedOrEndedMsgObj,
+  StopLossExecutedMsgObj,
+  StrategyHarvestFailureMsgObj,
+  metapoolTVLAlertMsgObj,
+  StopLossCountdownMsgObj,
+  curvepoolSlippageAlertMsgObj,
 } from "../utils/interface";
-import { shortTXHash, getConfig, removeDecimals } from "../utils/tools";
-const strategiesConfig = getConfig("strategies");
+import { shortTXHash, removeDecimals } from "../utils/tools";
+import { StrategyErrors } from "../utils/constant";
+import { StrategyConfig } from "../utils/StrategyConfig";
 
 export class MessageTemplate {
   public static getTotalAssetAlertMsg(msgObj: MessageObj) {
-    const { alertLeval, blockNumber, changeTotal } = msgObj;
-    return `[${alertLeval}] - System asset change | Asset change in block ${blockNumber} is ${changeTotal}.`;
+    const { alertLevel, blockNumber, changeTotal } = msgObj;
+    return `[${alertLevel}] - System asset change | Asset change in block ${blockNumber} is ${changeTotal}.`;
   }
 
   public static getTotalSupplyAlertMsg(msgObj: MessageObj) {
-    const { alertLeval, blockNumber, changeTotal } = msgObj;
-    return `[${alertLeval}] - System asset change | Total supply change in block ${blockNumber} is ${changeTotal}.`;
+    const { alertLevel, blockNumber, changeTotal } = msgObj;
+    return `[${alertLevel}] - System asset change | Total supply change in block ${blockNumber} is ${changeTotal}.`;
   }
 
   public static getPricePerShareAlertMsg(msgObj: MessageObj) {
-    const { alertLeval, blockNumber, changeTotal, changeBPS, baseBPS } = msgObj;
-    return `[${alertLeval}] - System asset change | Price per share change in block ${blockNumber} is ${changeTotal}. The ratio change is ${changeBPS} BPS, threshold ${baseBPS} BPS`;
+    const { alertLevel, blockNumber, changeTotal, changeBPS, baseBPS } = msgObj;
+    return `[${alertLevel}] - System asset change | Price per share change in block ${blockNumber} is ${changeTotal}. The ratio change is ${changeBPS} BPS, threshold ${baseBPS} BPS`;
   }
 
   public static getLockedProfitAlertMsg(msgObj: MessageObj) {
-    const { alertLeval, blockNumber, changeTotal } = msgObj;
-    return `[${alertLeval}] - System asset change | Locked profit in block ${blockNumber} isn't same and changed ${changeTotal}`;
+    const { alertLevel, blockNumber, changeTotal } = msgObj;
+    return `[${alertLevel}] - System asset change | Locked profit in block ${blockNumber} isn't same and changed ${changeTotal}`;
   }
 
   public static getStrategyHarvestInfoMsg(msgObj: MessageObj) {
@@ -43,9 +50,9 @@ export class MessageTemplate {
     const ndLockedProfit = removeDecimals(lockedProfit);
     return `[${shortTXHash(
       transactionHash
-    )}](https://etherscan.io/tx/${transactionHash}) ${
-      strategiesConfig[strategy || ""]?.name
-    } strategy does harvest action with profit: ${ndProfit}, debtPaid: ${ndDebtPaid}, debtAdded:${ndDebtAdded}, lockedProfit:${ndLockedProfit}.`;
+    )}](https://etherscan.io/tx/${transactionHash}) ${StrategyConfig.getStrategyConfig().getStrategyName(
+      strategy || ""
+    )} strategy does harvest action with profit: ${ndProfit}, debtPaid: ${ndDebtPaid}, debtAdded:${ndDebtAdded}, lockedProfit:${ndLockedProfit}.`;
   }
 
   public static getUserDepositTradeMsg(msgObj: GrouterTradeMsgObj) {
@@ -150,5 +157,103 @@ export class MessageTemplate {
     const _pwrdAmount = removeDecimals(pwrdAmount.toString(), 18);
     const _utilization = removeDecimals(utilization.toString(), 2);
     return `[${shortTX}](${txLink}) after ${action} the Tranche's asset is **$${_totalTVL}** ($${_gvtAmount} GVT, $${_pwrdAmount} PWRD), the utilization is ${_utilization}%`;
+  }
+
+  public static getStopLossInitiatedMsg(
+    msgObj: StopLossInitiatedOrEndedMsgObj
+  ) {
+    const { transactionHash, strategy } = msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
+      strategy
+    )}** start stop loss primer`;
+  }
+
+  public static getStopLossExecutedMsg(msgObj: StopLossExecutedMsgObj) {
+    const { transactionHash, strategy, isSuccess } = msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
+      strategy
+    )}** executed stop loss: ${isSuccess ? "Success" : "Failure"}`;
+  }
+
+  public static getStopLossEndedMsg(msgObj: StopLossInitiatedOrEndedMsgObj) {
+    const { transactionHash, strategy } = msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
+      strategy
+    )}** end stop loss primer`;
+  }
+
+  public static getStrategyHarvestFailureMsg(
+    msgObj: StrategyHarvestFailureMsgObj
+  ) {
+    const { transactionHash, strategy, reason, lowLevelData } = msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    let msg = reason;
+    if (msg == "") {
+      msg = MessageTemplate._getReadableErrorMsg(lowLevelData);
+    }
+    if (!msg) msg = lowLevelData;
+    return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
+      strategy
+    )}** harvest failed for ${msg}`;
+  }
+
+  public static getMetapoolTVLAlertMsg(msgObj: metapoolTVLAlertMsgObj) {
+    const {
+      transactionHash,
+      strategy,
+      metapoolName,
+      metapoolTVL,
+      strategyTVL,
+      ratio,
+    } = msgObj;
+    const shortTX = shortTXHash(transactionHash);
+    const txLink = `https://etherscan.io/tx/${transactionHash}`;
+    const curveMetaPoolLink = `https://curve.fi/#/ethereum/pools/${metapoolName}/deposit`;
+    return `[${shortTX}](${txLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
+      strategy
+    )}** asset(${strategyTVL}) has reached **${ratio}**% in [${metapoolName}](${curveMetaPoolLink}) metapool(${metapoolTVL}).`;
+  }
+  public static getMetaPoolSlippageInfoMsg(
+    msgObj: curvepoolSlippageAlertMsgObj
+  ) {
+    const { strategy, metapoolName, threshold, history } = msgObj;
+    const shortTX = shortTXHash(strategy);
+    const curveMetaPoolLink = `https://curve.fi/#/ethereum/pools/${metapoolName}/deposit`;
+    const contractLink = `https://etherscan.io/address/${strategy}`;
+    const strategyName =
+      StrategyConfig.getStrategyConfig().getStrategyName(strategy);
+    return `[${shortTX}](${contractLink}) **${metapoolName}** NEGATIVE MEANS WITHDRAW BONUS exotic -> base slippage: [${history}] Bps, threshold: ${threshold}, latest->before in [${metapoolName}](${curveMetaPoolLink}).`;
+  }
+
+  public static getCurvePoolSlippageInfoMsg(
+    msgObj: curvepoolSlippageAlertMsgObj
+  ) {
+    const { strategy, metapoolName, threshold, history } = msgObj;
+    const shortTX = shortTXHash(strategy);
+    const curveMetaPoolLink = `https://curve.fi/#/ethereum/pools/${metapoolName}/deposit`;
+    const contractLink = `https://etherscan.io/address/${strategy}`;
+    const strategyName =
+      StrategyConfig.getStrategyConfig().getStrategyName(strategy);
+    return `[${shortTX}](${contractLink}) **${strategyName}** NEGATIVE MEANS WITHDRAW BONUS 3CRV -> base slippage: [${history}] Bps, threshold: ${threshold}, latest->before`;
+  }
+
+  private static _getReadableErrorMsg(code: string): string {
+    return StrategyErrors[code];
+  }
+
+  public static getStopLossCountdownMsg(msgObj: StopLossCountdownMsgObj) {
+    const { strategy, hours, minutes, seconds } = msgObj;
+    const shortAddress = shortTXHash(strategy);
+    const addressLink = `https://etherscan.io/address/${strategy}`;
+    return `[${shortAddress}](${addressLink}) strategy **${StrategyConfig.getStrategyConfig().getStrategyName(
+      strategy
+    )}** stop loss has been running for ${hours} hours ${minutes} minutes ${seconds} seconds`;
   }
 }

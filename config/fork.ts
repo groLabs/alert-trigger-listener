@@ -78,3 +78,18 @@ export const EthereumSubscribeConfig = {
     },
   },
 };
+
+export const Scheduler = {
+  CheckStatsApi: {
+    cron: "00 */30 * * * *",
+    url: "https://g0805tl0eg.execute-api.eu-west-2.amazonaws.com/stats/gro_stats_mc?network=mainnet",
+    alertingMessage: "[WARN] E2 - Get gro stats failed",
+    criticalMessage: "[CRIT] E2 - Get gro stats failed",
+  },
+  CheckPersonalApi: {
+    cron: "20 */30 * * * *",
+    url: "https://g0805tl0eg.execute-api.eu-west-2.amazonaws.com/stats/gro_personal_position_mc?address=0x9b4A2a6D9c244c8c94e31A84A169E23b4b7E5b1f&network=mainnet",
+    alertingMessage: "[WARN] E1 - Get personal stats failed",
+    criticalMessage: "[CRIT] E1 - Get personal stats failed",
+  },
+};
