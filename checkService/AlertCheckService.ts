@@ -458,6 +458,86 @@ export class AlertCheckService {
     }
   }
 
+  public async checkG2MetaPoolTVL(eventData: Event, options: any) {
+    const { blockNumber, transactionHash, contractAddress } = eventData;
+    const { contractName, eventName } = options;
+    logger.info(`contractName: ${contractName}, eventName:${eventName}`);
+    const strategyAddr =
+      StrategyConfig.getStrategyConfig().getStrategyByMetapool(contractAddress);
+    if (!strategyAddr) {
+      return;
+    }
+
+    const strategyInfo = StrategyConfig.getStrategyConfig();
+    const rewardContractAddr =
+      strategyInfo.getStrategyRewardContract(strategyAddr);
+    const plToken = strategyInfo.getStrategyMetaPoolToken(strategyAddr);
+    const tokenIndex = strategyInfo.getStrategyTokenIndex(strategyAddr);
+    const metaPoolTotalSupply = await this._getChainData(
+      "totalSupply",
+      plToken,
+      {
+        blockNumber,
+      }
+    );
+    const strategyPlToken = await this._getChainData(
+      "balanceOf",
+      rewardContractAddr,
+      {
+        blockNumber,
+        account: strategyAddr,
+      }
+    );
+
+    logger.info(
+      `metaPoolTotalSupply:${metaPoolTotalSupply}, strategyPlToken: ${strategyPlToken}`
+    );
+
+    const ratioStr = divide(strategyPlToken, metaPoolTotalSupply);
+    const ratio = parseFloat(addDecimals(ratioStr, 2, 2));
+    logger.info(`ratioStr:${ratioStr}, ratio: ${ratio}`);
+    if (ratio >= assetRatio) {
+      const strategyTVL = removeDecimals(strategyPlToken, 18);
+      const metapoolTVL = removeDecimals(metaPoolTotalSupply, 18);
+      const msg = MessageTemplate.getMetapoolTVLAlertMsg({
+        transactionHash,
+        strategy: strategyAddr,
+        metapoolName: contractName.toLowerCase(),
+        metapoolTVL,
+        strategyTVL,
+        ratio: ratio.toString(),
+      });
+      sendMessage("alert.alerting", msg);
+    }
+
+    const result = [];
+    let totalSlippageCheckFailed = true;
+    for (let i = 0; i < 6; i++) {
+      let block = blockNumber - i * 1287;
+      const sp = await this._calculateMetaSlippage(
+        contractAddress,
+        strategyAddr,
+        block,
+        strategyPlToken
+      );
+      result.push(sp.totalSlippage);
+      totalSlippageCheckFailed =
+        totalSlippageCheckFailed && sp.totalSlippageAboveThreshold;
+    }
+    logger.info(`${contractName} - ${result.join("|")}`);
+    const msg = MessageTemplate.getMetaPoolSlippageInfoMsg({
+      strategy: strategyAddr,
+      metapoolName: contractName.toLowerCase(),
+      history: result.join("|"),
+      threshold: 400,
+    });
+    if (totalSlippageCheckFailed) {
+      sendMessage("slippage.alert", msg);
+    } else {
+      sendMessage("slippage.info", msg);
+    }
+  }
+
   public async checkBaseSlippage(eventData: Event, options: any) {
     const { blockNumber, transactionHash, contractAddress, args } = eventData;
     const { contractName, eventName } = options;
@@ -677,6 +757,58 @@ export class AlertCheckService {
         .isGreaterThan(threshold),
       pool3crvSlippage: pool3crvSlippage.multipliedBy(BN(10000)).toFixed(2),
       pool3crvSlippageAboveThreshold: pool3crvSlippage
+        .multipliedBy(BN(10000))
+        .isGreaterThan(threshold),
+    };
+  }
+
+  private async _calculateMetaSlippage(
+    contractAddress: string,
+    strategyAddr: string,
+    blockNumber: number,
+    strategyLpToken: string
+  ) {
+    const indexOf3crvInMetapool = 1;
+    const DECIMALS = BN("1000000000000000000");
+    // slippage check
+    let metaWithdrawOneCoin = await this._getChainData(
+      "calcWithdrawOneCoin",
+      contractAddress,
+      {
+        blockNumber,
+        tokenAmount: strategyLpToken,
+        index: indexOf3crvInMetapool,
+      }
+    );
+
+    let metaVirtualPrice = await this._getChainData(
+      "getVirtualPrice",
+      contractAddress,
+      {
+        blockNumber,
+        account: strategyAddr,
+      }
+    );
+
+    metaWithdrawOneCoin = BN(metaWithdrawOneCoin).dividedBy(DECIMALS);
+    metaVirtualPrice = BN(metaVirtualPrice).dividedBy(DECIMALS);
+
+    let virtualPrice = await this._getChainData("getVirtualPrice", curve3pool, {
+      blockNumber,
+      account: strategyAddr,
+    });
+    virtualPrice = BN(virtualPrice).dividedBy(DECIMALS);
+    const strategyLPToken = BN(strategyLpToken).dividedBy(DECIMALS);
+    const expected = strategyLPToken.multipliedBy(metaVirtualPrice);
+
+    const slippage = expected
+      .minus(metaWithdrawOneCoin.multipliedBy(virtualPrice))
+      .dividedBy(expected);
+
+    const threshold = BN(400);
+    return {
+      totalSlippage: slippage.multipliedBy(BN(10000)).toFixed(2),
+      totalSlippageAboveThreshold: slippage
         .multipliedBy(BN(10000))
         .isGreaterThan(threshold),
     };
