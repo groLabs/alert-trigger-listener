@@ -187,9 +187,17 @@ export class AlertCheckService {
     logger.info(`options: ${JSON.stringify(options)}`);
     const { blockNumber, transactionHash, contractAddress, args } = eventData;
     const { contractName, eventName } = options;
-    const { strategy, gain, loss, debtPaid, debtAdded, lockedProfit } = args;
+    const {
+      strategy,
+      gain,
+      loss,
+      debtPaid,
+      debtAdded,
+      lockedProfit,
+      lockedProfitBeforeLoss,
+    } = args;
     logger.info(
-      `strategy: ${strategy}\ngain: ${gain}\nloss: ${loss}\ndebtPaid:${debtPaid}\ndebtAdded:${debtAdded}\nlockedProfit: ${lockedProfit}`
+      `strategy: ${strategy}\ngain: ${gain}\nloss: ${loss}\ndebtPaid:${debtPaid}\ndebtAdded:${debtAdded}\nlockedProfit: ${lockedProfit}\nlockedProfitBeforeLoss: ${lockedProfitBeforeLoss}`
     );
 
     const profit =
@@ -204,6 +212,7 @@ export class AlertCheckService {
       debtPaid,
       debtAdded,
       lockedProfit,
+      lockedProfitBeforeLoss,
     });
     sendMessage("trade.info", harvestInfo);
 

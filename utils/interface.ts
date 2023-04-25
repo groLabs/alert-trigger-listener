@@ -28,6 +28,7 @@ export interface MessageObj {
   debtPaid?: string;
   debtAdded?: string;
   lockedProfit?: string;
+  lockedProfitBeforeLoss?: string;
 }
 
 export interface GrouterTradeMsgObj {

@@ -43,6 +43,7 @@ export class MessageTemplate {
       debtPaid,
       debtAdded,
       lockedProfit,
+      lockedProfitBeforeLoss,
     } = msgObj;
     const ndProfit = removeDecimals(profit);
     const ndDebtPaid = removeDecimals(debtPaid);
@@ -52,7 +53,7 @@ export class MessageTemplate {
       transactionHash
     )}](https://etherscan.io/tx/${transactionHash}) ${StrategyConfig.getStrategyConfig().getStrategyName(
       strategy || ""
-    )} strategy does harvest action with profit: ${ndProfit}, debtPaid: ${ndDebtPaid}, debtAdded:${ndDebtAdded}, lockedProfit:${ndLockedProfit}.`;
+    )} strategy does harvest action with profit: ${ndProfit}, debtPaid: ${ndDebtPaid}, debtAdded:${ndDebtAdded}, lockedProfit:${ndLockedProfit}, lockedProfitBeforeLoss: ${lockedProfitBeforeLoss}`;
   }
 
   public static getUserDepositTradeMsg(msgObj: GrouterTradeMsgObj) {
