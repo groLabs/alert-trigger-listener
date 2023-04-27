@@ -103,6 +103,13 @@ export enum AlertingLevel {
 }
 
 export interface curvepoolSlippageAlertMsgObj {
+  curvePool: string;
+  stablecoinName: string;
+  history: string;
+  threshold: number;
+}
+
+export interface metapoolSlippageAlertMsgObj {
   strategy: string;
   metapoolName: string;
   history: string;

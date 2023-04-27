@@ -30,6 +30,8 @@ const curveBalanceDecimals = [
 ];
 const curveCheckDeltaThreshold = getConfig("deltaThreshold", false) || 1000000;
 const deltaThreshold = BN(curveCheckDeltaThreshold);
+const SlippageWarningThreshold = BN(200);
+const SlippageCriticalThreshold = BN(400);
 
 export class AlertCheckService {
   private static _alertCheckService: AlertCheckService;
@@ -386,87 +388,6 @@ export class AlertCheckService {
     sendMessage("alert.alerting", msg);
   }
 
-  public async checkMetaPoolTVL(eventData: Event, options: any) {
-    const { blockNumber, transactionHash, contractAddress } = eventData;
-    const { contractName, eventName } = options;
-    logger.info(`contractName: ${contractName}, eventName:${eventName}`);
-    const strategyAddr =
-      StrategyConfig.getStrategyConfig().getStrategyByMetapool(contractAddress);
-    if (!strategyAddr) {
-      return;
-    }
-
-    const strategyInfo = StrategyConfig.getStrategyConfig();
-    const rewardContractAddr =
-      strategyInfo.getStrategyRewardContract(strategyAddr);
-    const plToken = strategyInfo.getStrategyMetaPoolToken(strategyAddr);
-    const tokenIndex = strategyInfo.getStrategyTokenIndex(strategyAddr);
-    const metaPoolTotalSupply = await this._getChainData(
-      "totalSupply",
-      plToken,
-      {
-        blockNumber,
-      }
-    );
-    const strategyPlToken = await this._getChainData(
-      "balanceOf",
-      rewardContractAddr,
-      {
-        blockNumber,
-        account: strategyAddr,
-      }
-    );
-
-    logger.info(
-      `metaPoolTotalSupply:${metaPoolTotalSupply}, strategyPlToken: ${strategyPlToken}`
-    );
-
-    const ratioStr = divide(strategyPlToken, metaPoolTotalSupply);
-    const ratio = parseFloat(addDecimals(ratioStr, 2, 2));
-    logger.info(`ratioStr:${ratioStr}, ratio: ${ratio}`);
-    if (ratio >= assetRatio) {
-      const strategyTVL = removeDecimals(strategyPlToken, 18);
-      const metapoolTVL = removeDecimals(metaPoolTotalSupply, 18);
-      const msg = MessageTemplate.getMetapoolTVLAlertMsg({
-        transactionHash,
-        strategy: strategyAddr,
-        metapoolName: contractName.toLowerCase(),
-        metapoolTVL,
-        strategyTVL,
-        ratio: ratio.toString(),
-      });
-      sendMessage("alert.alerting", msg);
-    }
-
-    const result = [];
-    let totalSlippageCheckFailed = true;
-    for (let i = 0; i < 6; i++) {
-      let block = blockNumber - i * 1287;
-      const sp = await this._calculateSlippage(
-        contractAddress,
-        strategyAddr,
-        block,
-        strategyPlToken,
-        tokenIndex
-      );
-      result.push(sp.totalSlippage);
-      totalSlippageCheckFailed =
-        totalSlippageCheckFailed && sp.totalSlippageAboveThreshold;
-    }
-    logger.info(`${contractName} - ${result.join("|")}`);
-    const msg = MessageTemplate.getMetaPoolSlippageInfoMsg({
-      strategy: strategyAddr,
-      metapoolName: contractName.toLowerCase(),
-      history: result.join("|"),
-      threshold: 400,
-    });
-    if (totalSlippageCheckFailed) {
-      sendMessage("slippage.alert", msg);
-    } else {
-      sendMessage("slippage.info", msg);
-    }
-  }
-
   public async checkG2MetaPoolTVL(eventData: Event, options: any) {
     const { blockNumber, transactionHash, contractAddress } = eventData;
     const { contractName, eventName } = options;
@@ -541,85 +462,56 @@ export class AlertCheckService {
       threshold: 400,
     });
     if (totalSlippageCheckFailed) {
-      sendMessage("slippage.alert", msg);
+      sendMessage("slippage.alerting", msg);
     } else {
       sendMessage("slippage.info", msg);
     }
   }
 
-  public async checkBaseSlippage(eventData: Event, options: any) {
+  public async check3PoolSlippage(eventData: Event, options: any) {
     const { blockNumber, transactionHash, contractAddress, args } = eventData;
     const { contractName, eventName } = options;
-
+    const amount = BN("1000000000000000000000000");
+    const stableCoinName = ["DAI", "USDC", "USDT"];
     if (this._checkCurveBalanceDelta(eventData, options)) {
-      const strategyInfo = StrategyConfig.getStrategyConfig();
-      const strategies = strategyInfo.getStrategies();
-      for (let s = 0; s < strategies.length; s += 1) {
-        const strategyAddr = strategies[s];
-        const rewardContractAddr =
-          strategyInfo.getStrategyRewardContract(strategyAddr);
-        const metapoolAddress = strategyInfo.getStrategyMetaPool(strategyAddr);
-        const tokenIndex = strategyInfo.getStrategyTokenIndex(strategyAddr);
-        const strategyMetapoolName =
-          strategyInfo.getStrategyMetaPoolName(strategyAddr);
-        logger.info(
-          `strategyAddr ${strategyAddr} rewardContractAddr ${rewardContractAddr} tokenIndex ${tokenIndex}`
-        );
+      for (let s = 0; s <= 2; s += 1) {
         const baseSlippageResult = [];
-        const totalSlippageResult = [];
-
-        let baseSlippageCheckFailed = true;
-        let totalSlippageCheckFailed = true;
+        let baseSlippageCheckAllFailed = true;
+        let recentlyBaseSlippageCheckFailedCritical = false;
+        let recentlyBaseSlippageCheckFailedWarning = false;
         for (let i = 0; i < 6; i++) {
           let block = blockNumber - i * 1287;
-          const strategyPlToken = await this._getChainData(
-            "balanceOf",
-            rewardContractAddr,
-            {
-              block,
-              account: strategyAddr,
-            }
-          );
-          const sp = await this._calculateSlippage(
-            metapoolAddress,
-            strategyAddr,
-            block,
-            strategyPlToken,
-            tokenIndex
-          );
+          const sp = await this._calculateSlippage(block, s);
           baseSlippageResult.push(sp.pool3crvSlippage);
-          baseSlippageCheckFailed =
-            baseSlippageCheckFailed && sp.pool3crvSlippageAboveThreshold;
-          totalSlippageResult.push(sp.totalSlippage);
-          totalSlippageCheckFailed =
-            totalSlippageCheckFailed && sp.totalSlippageAboveThreshold;
+
+          baseSlippageCheckAllFailed =
+            baseSlippageCheckAllFailed &&
+            sp.pool3crvSlippageAboveCriticalThreshold;
+          if (i == 0 && sp.pool3crvSlippageAboveCriticalThreshold) {
+            recentlyBaseSlippageCheckFailedCritical = true;
+          }
+          if (i == 0 && sp.pool3crvSlippageAboveWarningThreshold) {
+            recentlyBaseSlippageCheckFailedWarning = true;
+          }
+
+          //   console.log(
+          //     `token index ${s} blockidx ${i} sp ${sp.pool3crvSlippage} failed ${sp.pool3crvSlippageAboveCriticalThreshold} recentlyfailed ${recentlyBaseSlippageCheckFailedCritical}`
+          //   );
         }
 
         logger.info(
           `${blockNumber} ${contractName} - ${baseSlippageResult.join("|")}`
         );
         const msgBaseSlippage = MessageTemplate.getCurvePoolSlippageInfoMsg({
-          strategy: strategyAddr,
-          metapoolName: contractName.toLowerCase(),
+          curvePool: curve3pool,
+          stablecoinName: stableCoinName[s],
           history: baseSlippageResult.join("|"),
           threshold: 400,
         });
-        if (baseSlippageCheckFailed) {
-          sendMessage("slippage.alert", msgBaseSlippage);
+        if (recentlyBaseSlippageCheckFailedCritical) {
+          sendMessage("slippage.alerting", msgBaseSlippage);
         } else {
           sendMessage("slippage.info", msgBaseSlippage);
-        }
-
-        const msgTotalSlippage = MessageTemplate.getMetaPoolSlippageInfoMsg({
-          strategy: strategyAddr,
-          metapoolName: strategyMetapoolName.toLowerCase(),
-          history: totalSlippageResult.join("|"),
-          threshold: 400,
-        });
-        if (totalSlippageCheckFailed) {
-          sendMessage("slippage.alert", msgTotalSlippage);
-        } else {
-          sendMessage("slippage.info", msgTotalSlippage);
         }
       }
     }
@@ -683,49 +575,21 @@ export class AlertCheckService {
     return false;
   }
 
-  private async _calculateSlippage(
-    contractAddress: string,
-    strategyAddr: string,
-    blockNumber: number,
-    strategyLpToken: string,
-    tokenIndex: number
-  ) {
-    const indexOf3crvInMetapool = 1;
+  private async _calculateSlippage(blockNumber: number, tokenIndex: number) {
     const DECIMALS = BN("1000000000000000000");
+    const amount = BN("1000000000000000000000000");
     // slippage check
-    let metaWithdrawOneCoin = await this._getChainData(
-      "calcWithdrawOneCoin",
-      contractAddress,
-      {
-        blockNumber,
-        tokenAmount: strategyLpToken,
-        index: indexOf3crvInMetapool,
-      }
-    );
-
-    let metaVirtualPrice = await this._getChainData(
-      "getVirtualPrice",
-      contractAddress,
-      {
-        blockNumber,
-        account: strategyAddr,
-      }
-    );
-
     let curveWithdrawOneCoin = await this._getChainData(
       "calcWithdrawOneCoin",
       curve3pool,
       {
         blockNumber,
-        tokenAmount: metaWithdrawOneCoin,
+        tokenAmount: amount,
         index: tokenIndex,
       }
     );
 
     curveWithdrawOneCoin = BN(curveWithdrawOneCoin);
-    metaWithdrawOneCoin = BN(metaWithdrawOneCoin).dividedBy(DECIMALS);
-    metaVirtualPrice = BN(metaVirtualPrice).dividedBy(DECIMALS);
-
     // adjust for usdc and usdt
     if (tokenIndex > 0) {
       curveWithdrawOneCoin = curveWithdrawOneCoin.dividedBy(BN("1000000"));
@@ -735,39 +599,27 @@ export class AlertCheckService {
 
     let virtualPrice = await this._getChainData("getVirtualPrice", curve3pool, {
       blockNumber,
-      account: strategyAddr,
     });
     virtualPrice = BN(virtualPrice).dividedBy(DECIMALS);
-    const strategyLPToken = BN(strategyLpToken).dividedBy(DECIMALS);
-    const expected = strategyLPToken.multipliedBy(metaVirtualPrice);
-
-    const slippage = expected
-      .minus(metaWithdrawOneCoin.multipliedBy(virtualPrice))
-      .dividedBy(expected);
 
     const ONE = BN(1);
     // 1 - stableCoinAmount / 3crvAmount * virtualPrice
     const pool3crvSlippage = ONE.minus(
       curveWithdrawOneCoin.dividedBy(
-        metaWithdrawOneCoin.multipliedBy(virtualPrice)
+        amount.div(DECIMALS).multipliedBy(virtualPrice)
       )
     );
-
-    // 1 -  ((1 - slippage) * (1 - baseSlippage)
-    const totalSlippage = ONE.minus(
-      ONE.minus(slippage).multipliedBy(ONE.minus(pool3crvSlippage))
-    );
-
-    const threshold = BN(400);
+    // console.log(
+    //   `${blockNumber} ${tokenIndex} curveWithdrawOneCoin ${curveWithdrawOneCoin} virtualPrice ${virtualPrice} pool3crvSlippage ${pool3crvSlippage}`
+    // );
     return {
-      totalSlippage: totalSlippage.multipliedBy(BN(10000)).toFixed(2),
-      totalSlippageAboveThreshold: totalSlippage
-        .multipliedBy(BN(10000))
-        .isGreaterThan(threshold),
       pool3crvSlippage: pool3crvSlippage.multipliedBy(BN(10000)).toFixed(2),
-      pool3crvSlippageAboveThreshold: pool3crvSlippage
+      pool3crvSlippageAboveWarningThreshold: pool3crvSlippage
         .multipliedBy(BN(10000))
-        .isGreaterThan(threshold),
+        .isGreaterThan(SlippageWarningThreshold),
+      pool3crvSlippageAboveCriticalThreshold: pool3crvSlippage
+        .multipliedBy(BN(10000))
+        .isGreaterThan(SlippageCriticalThreshold),
     };
   }
 
