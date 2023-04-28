@@ -287,9 +287,14 @@ export const EthereumSubscribeConfig = {
 };
 
 export const Scheduler = {
-  //   StopLossCountdown: {
-  //     address: "0x117B2e090Cfe19cB6A246f690e58C54cBEB6b7b3",
-  //     cron: "30 */60 * * * *",
-  //     strategies: ["0xd1B9aF64Ed5CdcaEb58955d82FB384b3e558Df7B"],
-  //   },
+  StopLossCountdown: {
+    address: "0xE09dE1b49118bB197b2Ea45D4d7054D48D1c3224",
+    cron: "30 */60 * * * *",
+    strategies: [
+      "0x60a6A86ad77EF672D93Db4408D65cf27Dd627050",
+      "0x4D81d0C2655D8D5FDee83DbB16E6b899ec276FAc",
+      "0x73703f0493C08bA592AB1e321BEaD695AC5b39E3",
+      "0xa522b13feF6161C570FF765C986cb9992a89C786",
+    ],
+  },
 };
